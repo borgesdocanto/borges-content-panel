@@ -12,7 +12,6 @@ type Contenido = {
   id: string
   archivo: string
   file_id_drive: string
-  portada_vertical_path: string
   estado: string
   fecha_aprobacion: string
   score_promedio: number
@@ -24,8 +23,10 @@ type Contenido = {
   ig_hashtags: string
   tt_titulo: string
   tt_descripcion: string
+  tt_hashtags: string
   yt_titulo: string
   yt_descripcion: string
+  yt_hashtags: string
   yt_keywords: string
   li_titulo: string
   li_descripcion: string
@@ -38,14 +39,34 @@ type Contenido = {
   li_publicado: boolean
   fb_publicado: boolean
   tw_publicado: boolean
+  portada_vertical_path: string
 }
 
 type Config = { parametro: string; valor: string }
 
 const REDES = ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook', 'twitter', 'threads']
-const RED_COLORS: Record<string, string> = {
-  instagram: '#e1306c', tiktok: '#69c9d0', youtube: '#ff0000',
-  linkedin: '#0077b5', facebook: '#1877f2', twitter: '#1da1f2', threads: '#aaaaaa',
+
+const RED_META: Record<string, { color: string; label: string; emoji: string }> = {
+  instagram: { color: '#e1306c', label: 'Instagram', emoji: '📸' },
+  tiktok:    { color: '#69c9d0', label: 'TikTok',    emoji: '🎵' },
+  youtube:   { color: '#ff0000', label: 'YouTube',   emoji: '▶️' },
+  linkedin:  { color: '#0077b5', label: 'LinkedIn',  emoji: '💼' },
+  facebook:  { color: '#1877f2', label: 'Facebook',  emoji: '👥' },
+  twitter:   { color: '#1da1f2', label: 'Twitter/X', emoji: '🐦' },
+  threads:   { color: '#aaaaaa', label: 'Threads',   emoji: '🧵' },
+}
+
+const Btn = ({ onClick, children, variant = 'ghost', style = {}, disabled = false }: any) => {
+  const styles: Record<string, React.CSSProperties> = {
+    ghost:  { background: 'transparent', border: '1px solid var(--border)', color: 'var(--text2)' },
+    gold:   { background: 'var(--gold)', border: 'none', color: '#000' },
+    danger: { background: 'rgba(240,84,84,0.1)', border: '1px solid rgba(240,84,84,0.3)', color: 'var(--red)' },
+  }
+  return (
+    <button onClick={onClick} disabled={disabled} style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: disabled ? 'default' : 'pointer', transition: 'all 0.2s', opacity: disabled ? 0.5 : 1, ...styles[variant], ...style }}>
+      {children}
+    </button>
+  )
 }
 
 const Card = ({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) => (
@@ -62,19 +83,6 @@ const StatCard = ({ label, value, sub, color }: { label: string; value: string |
     {sub && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{sub}</div>}
   </div>
 )
-
-const Btn = ({ onClick, children, variant = 'ghost', style = {} }: any) => {
-  const styles: Record<string, React.CSSProperties> = {
-    ghost: { background: 'transparent', border: '1px solid var(--border)', color: 'var(--text2)' },
-    gold: { background: 'var(--gold)', border: 'none', color: '#000' },
-    danger: { background: 'rgba(240,84,84,0.1)', border: '1px solid rgba(240,84,84,0.3)', color: 'var(--red)' },
-  }
-  return (
-    <button onClick={onClick} style={{ padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', ...styles[variant], ...style }}>
-      {children}
-    </button>
-  )
-}
 
 export default function Panel() {
   const [page, setPage] = useState('cola')
@@ -140,7 +148,12 @@ export default function Panel() {
     : '0'
 
   const contenidosFiltrados = filtroRed === 'todas' ? contenidos
-    : contenidos.filter(c => filtroRed === 'instagram' ? c.ig_titulo : filtroRed === 'tiktok' ? c.tt_titulo : filtroRed === 'youtube' ? c.yt_titulo : filtroRed === 'linkedin' ? c.li_titulo : true)
+    : contenidos.filter(c =>
+        filtroRed === 'instagram' ? c.ig_titulo :
+        filtroRed === 'tiktok' ? c.tt_titulo :
+        filtroRed === 'youtube' ? c.yt_titulo :
+        filtroRed === 'linkedin' ? c.li_titulo : true
+      )
 
   const navItems = [
     { id: 'cola', icon: '📋', label: 'Cola' },
@@ -149,6 +162,76 @@ export default function Panel() {
     { id: 'tendencias', icon: '🔥', label: 'Tendencias' },
     { id: 'config', icon: '⚙️', label: 'Config' },
   ]
+
+  // Componente tarjeta de video
+  const VideoCard = ({ c }: { c: Contenido }) => (
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', gap: 0, overflow: 'hidden' }}>
+      {/* Portada vertical */}
+      <div style={{ width: 80, flexShrink: 0, position: 'relative', background: 'var(--bg3)' }}>
+        {c.portada_vertical_path ? (
+          <img src={c.portada_vertical_path} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', minHeight: 142 }} />
+        ) : (
+          <div style={{ width: 80, minHeight: 142, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: 'var(--text2)' }}>🎬</div>
+        )}
+        {/* Score badge */}
+        <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center' }}>
+          <span style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 10, padding: '2px 7px', fontSize: 11, fontWeight: 700, color: (c.score_promedio || 0) >= 8 ? 'var(--green)' : 'var(--gold)' }}>
+            {c.score_promedio || '—'}
+          </span>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+        {/* Título */}
+        {c.file_id_drive ? (
+          <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer"
+            style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {c.ig_titulo || c.archivo} ↗
+          </a>
+        ) : (
+          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {c.ig_titulo || c.archivo}
+          </div>
+        )}
+
+        {/* Fecha */}
+        <div style={{ fontSize: 11, color: 'var(--text2)' }}>
+          {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '—'}
+        </div>
+
+        {/* Redes con logo y estado */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {[
+            { key: 'ig', pub: c.ig_publicado, meta: RED_META.instagram },
+            { key: 'tt', pub: c.tt_publicado, meta: RED_META.tiktok },
+            { key: 'yt', pub: c.yt_publicado, meta: RED_META.youtube },
+            { key: 'li', pub: c.li_publicado, meta: RED_META.linkedin },
+            { key: 'fb', pub: c.fb_publicado, meta: RED_META.facebook },
+            { key: 'tw', pub: c.tw_publicado, meta: RED_META.twitter },
+          ].map(({ key, pub, meta }) => (
+            <div key={key} title={`${meta.label}: ${pub ? 'Publicado' : 'Pendiente'}`} style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+              background: pub ? `${meta.color}22` : 'var(--bg3)',
+              border: `1px solid ${pub ? meta.color + '55' : 'var(--border)'}`,
+              color: pub ? meta.color : 'var(--text2)',
+            }}>
+              <span style={{ fontSize: 11 }}>{meta.emoji}</span>
+              {key.toUpperCase()}
+              <span style={{ fontSize: 8 }}>{pub ? '✓' : '○'}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Acciones */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
+          <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
+          <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })} style={{ padding: '6px 10px' }}>🗑</Btn>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -186,7 +269,7 @@ export default function Panel() {
       <main style={{ marginLeft: 220, padding: 32, flex: 1, minWidth: 0 }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text2)', fontSize: 14 }}>
-            Cargando datos de Supabase...
+            Cargando...
           </div>
         ) : (
           <>
@@ -197,58 +280,22 @@ export default function Panel() {
                   COLA DE <span style={{ color: 'var(--gold)' }}>PUBLICACIÓN</span>
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
-                  <StatCard label="Total contenidos" value={contenidos.length} sub="en sistema" />
-                  <StatCard label="Aprobados" value={contenidos.filter(c => c.estado === 'aprobado').length} sub="listos para publicar" color="var(--green)" />
-                  <StatCard label="Score promedio" value={scorePromedio} sub="del copy generado" color="var(--gold)" />
-                  <StatCard label="Sistema" value={paused ? 'OFF' : 'ON'} sub={paused ? 'Pausado' : 'Activo'} color={paused ? 'var(--red)' : 'var(--green)'} />
+                  <StatCard label="Total" value={contenidos.length} sub="contenidos" />
+                  <StatCard label="Aprobados" value={contenidos.filter(c => c.estado === 'aprobado').length} color="var(--green)" />
+                  <StatCard label="Score promedio" value={scorePromedio} color="var(--gold)" />
+                  <StatCard label="Sistema" value={paused ? 'OFF' : 'ON'} color={paused ? 'var(--red)' : 'var(--green)'} sub={paused ? 'Pausado' : 'Activo'} />
                 </div>
-                {contenidos.length === 0 && (
+                {contenidos.length === 0 ? (
                   <Card>
                     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>
-                      No hay contenidos todavía. Subí videos a Google Drive para empezar.
+                      No hay contenidos. Subí videos a Google Drive para empezar.
                     </div>
                   </Card>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    {contenidos.slice(0, 20).map(c => <VideoCard key={c.id} c={c} />)}
+                  </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  {contenidos.slice(0, 20).map(c => (
-                    <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: 'var(--bg3)', overflow: 'hidden' }}>
-                        {c.portada_vertical_path ? (
-                          <img src={c.portada_vertical_path} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>🎬</div>
-                        )}
-                        <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 700, color: (c.score_promedio || 0) >= 8 ? 'var(--green)' : 'var(--gold)' }}>
-                          {c.score_promedio}/10
-                        </div>
-                      </div>
-                      <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {c.file_id_drive ? (
-                          <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {c.ig_titulo || c.archivo} ↗
-                          </a>
-                        ) : (
-                          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{c.ig_titulo || c.archivo}</div>
-                        )}
-                        <div style={{ fontSize: 11, color: 'var(--text2)' }}>
-                          {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '-'}
-                        </div>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {[['ig', c.ig_publicado], ['tt', c.tt_publicado], ['yt', c.yt_publicado], ['li', c.li_publicado], ['fb', c.fb_publicado], ['tw', c.tw_publicado]].map(([r, pub]) => (
-                            <div key={r as string} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'var(--bg3)', fontWeight: 600 }}>
-                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: pub ? 'var(--green)' : 'var(--text2)' }} />
-                              {(r as string).toUpperCase()}
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 4 }}>
-                          <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center' }}>Ver copy</Btn>
-                          <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })}>🗑</Btn>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
@@ -262,58 +309,21 @@ export default function Panel() {
                   {['todas', ...REDES].map(r => (
                     <div key={r} onClick={() => setFiltroRed(r)} style={{
                       padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-                      border: `1px solid ${filtroRed === r ? (RED_COLORS[r] || 'var(--gold)') : 'var(--border)'}`,
-                      color: filtroRed === r ? (RED_COLORS[r] || 'var(--gold)') : 'var(--text2)',
-                      background: filtroRed === r ? `${RED_COLORS[r] || '#c9a84c'}22` : 'transparent'
-                    }}>{r.charAt(0).toUpperCase() + r.slice(1)}</div>
+                      border: `1px solid ${filtroRed === r ? (RED_META[r]?.color || 'var(--gold)') : 'var(--border)'}`,
+                      color: filtroRed === r ? (RED_META[r]?.color || 'var(--gold)') : 'var(--text2)',
+                      background: filtroRed === r ? `${RED_META[r]?.color || '#c9a84c'}22` : 'transparent'
+                    }}>
+                      {r === 'todas' ? 'Todas' : `${RED_META[r]?.emoji} ${RED_META[r]?.label}`}
+                    </div>
                   ))}
                 </div>
-                <Card style={{ padding: 0, overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        {['Video', 'Score', 'Fecha', 'Estado', 'Acciones'].map(h => (
-                          <th key={h} style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text2)', padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {contenidosFiltrados.map(c => (
-                        <tr key={c.id}>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid rgba(42,42,50,0.5)', maxWidth: 280 }}>
-                            <div style={{ fontWeight: 500, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ig_titulo || 'Sin título'}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.archivo}</div>
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid rgba(42,42,50,0.5)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 120 }}>
-                              <div style={{ flex: 1, height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${(c.score_promedio || 0) * 10}%`, background: 'linear-gradient(90deg, var(--gold), var(--gold2))', borderRadius: 2 }} />
-                              </div>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gold)', width: 24 }}>{c.score_promedio}</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid rgba(42,42,50,0.5)', fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                            {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '-'}
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid rgba(42,42,50,0.5)' }}>
-                            <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c.estado === 'aprobado' ? 'rgba(45,212,160,0.15)' : 'rgba(201,168,76,0.15)', color: c.estado === 'aprobado' ? 'var(--green)' : 'var(--gold)' }}>
-                              {c.estado === 'aprobado' ? 'Aprobado' : 'Pendiente'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid rgba(42,42,50,0.5)' }}>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <Btn onClick={() => setSelectedContent(c)}>Ver copy</Btn>
-                              <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })}>Eliminar</Btn>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {contenidosFiltrados.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>No hay contenidos para mostrar.</div>
-                  )}
-                </Card>
+                {contenidosFiltrados.length === 0 ? (
+                  <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>No hay contenidos.</div></Card>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    {contenidosFiltrados.map(c => <VideoCard key={c.id} c={c} />)}
+                  </div>
+                )}
               </div>
             )}
 
@@ -327,7 +337,7 @@ export default function Panel() {
                   <StatCard label="Videos totales" value={contenidos.length} />
                   <StatCard label="Score promedio" value={scorePromedio} color="var(--gold)" />
                   <StatCard label="Score máximo" value={contenidos.length ? Math.max(...contenidos.map(c => c.score_promedio || 0)).toFixed(1) : '0'} color="var(--green)" />
-                  <StatCard label="Con score alto" value={contenidos.filter(c => (c.score_promedio || 0) >= 8).length} sub="score ≥ 8" color="var(--green)" />
+                  <StatCard label="Score alto (≥8)" value={contenidos.filter(c => (c.score_promedio || 0) >= 8).length} color="var(--green)" />
                 </div>
                 <Card>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Top videos por score</div>
@@ -363,7 +373,7 @@ export default function Panel() {
                     {contenidos.filter(c => (c.score_gancho || 0) >= 8).slice(0, 5).map(c => (
                       <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ fontSize: 13, marginBottom: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                          {c.ig_descripcion?.substring(0, 100)}...
+                          {c.ig_descripcion?.substring(0, 120)}...
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--gold)' }}>Gancho: {c.score_gancho}/10</div>
                       </div>
@@ -402,7 +412,7 @@ export default function Panel() {
                       { label: 'Score 8-9', count: contenidos.filter(c => (c.score_promedio || 0) >= 8 && (c.score_promedio || 0) < 9).length, color: 'var(--blue)' },
                       { label: 'Score 7-8', count: contenidos.filter(c => (c.score_promedio || 0) >= 7 && (c.score_promedio || 0) < 8).length, color: 'var(--gold)' },
                       { label: 'Score 6-7', count: contenidos.filter(c => (c.score_promedio || 0) >= 6 && (c.score_promedio || 0) < 7).length, color: 'var(--text2)' },
-                      { label: 'Score <6', count: contenidos.filter(c => (c.score_promedio || 0) < 6).length, color: 'var(--red)' },
+                      { label: 'Score <6',  count: contenidos.filter(c => (c.score_promedio || 0) < 6 && (c.score_promedio || 0) > 0).length, color: 'var(--red)' },
                     ].map(s => (
                       <div key={s.label} style={{ background: 'var(--bg3)', borderRadius: 8, padding: 16, textAlign: 'center' }}>
                         <div style={{ fontFamily: 'Bebas Neue', fontSize: 32, color: s.color }}>{s.count}</div>
@@ -424,11 +434,11 @@ export default function Panel() {
                   <Card>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Horarios de publicación</div>
                     {[
-                      { label: 'Instagram', sub: 'Día 1', key: 'hora_instagram', default: '19:00' },
-                      { label: 'TikTok + Facebook + Threads', sub: 'Día 2', key: 'hora_tiktok', default: '20:00' },
-                      { label: 'YouTube Shorts', sub: 'Día 3', key: 'hora_youtube', default: '10:00' },
-                      { label: 'LinkedIn', sub: 'Día 4', key: 'hora_linkedin', default: '12:00' },
-                      { label: 'Twitter/X', sub: 'Día 5', key: 'hora_twitter', default: '09:00' },
+                      { label: '📸 Instagram', sub: 'Día 1', key: 'hora_instagram', default: '19:00' },
+                      { label: '🎵 TikTok + Facebook + Threads', sub: 'Día 2', key: 'hora_tiktok', default: '20:00' },
+                      { label: '▶️ YouTube Shorts', sub: 'Día 3', key: 'hora_youtube', default: '10:00' },
+                      { label: '💼 LinkedIn', sub: 'Día 4', key: 'hora_linkedin', default: '12:00' },
+                      { label: '🐦 Twitter/X', sub: 'Día 5', key: 'hora_twitter', default: '09:00' },
                     ].map(item => (
                       <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                         <div>
@@ -451,7 +461,7 @@ export default function Panel() {
                     ].map(item => (
                       <div key={item.key} style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>{item.label}</div>
-                        <input type="number" step={item.step} value={config[item.key] || item.default}
+                        <input type="number" step={(item as any).step} value={config[item.key] || item.default}
                           onChange={e => setConfig(prev => ({ ...prev, [item.key]: e.target.value }))}
                           style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: 6, fontSize: 14, width: '100%' }} />
                       </div>
@@ -470,55 +480,80 @@ export default function Panel() {
         )}
       </main>
 
-      {/* MODAL VER CONTENIDO */}
+      {/* ── MODAL VER COPY ── */}
       {selectedContent && (
-        <div onClick={() => setSelectedContent(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 560, maxWidth: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 2, color: 'var(--gold)' }}>VER CONTENIDO</div>
-              <span onClick={() => setSelectedContent(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
-            </div>
-            {/* Portada + link Drive */}
-            <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'flex-start' }}>
+        <div onClick={() => setSelectedContent(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, width: 600, maxWidth: '100%', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+
+            {/* Header modal */}
+            <div style={{ display: 'flex', gap: 16, padding: 20, borderBottom: '1px solid var(--border)', alignItems: 'flex-start' }}>
               {selectedContent.portada_vertical_path && (
-                <img src={selectedContent.portada_vertical_path} alt="portada" style={{ width: 80, height: 142, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                <img src={selectedContent.portada_vertical_path} alt="portada" style={{ width: 72, height: 128, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
               )}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{selectedContent.ig_titulo || selectedContent.archivo}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 1, color: 'var(--gold)', marginBottom: 8 }}>VER COPY</div>
+                <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4, marginBottom: 10 }}>{selectedContent.ig_titulo || selectedContent.archivo}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { label: `🎯 Gancho ${selectedContent.score_gancho}/10` },
+                    { label: `💡 Claridad ${selectedContent.score_claridad}/10` },
+                    { label: `📢 CTA ${selectedContent.score_cta}/10` },
+                    { label: `⭐ Promedio ${selectedContent.score_promedio}/10`, green: true },
+                  ].map(s => (
+                    <span key={s.label} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: s.green ? 'rgba(45,212,160,0.15)' : 'rgba(201,168,76,0.15)', color: s.green ? 'var(--green)' : 'var(--gold)' }}>
+                      {s.label}
+                    </span>
+                  ))}
+                </div>
                 {selectedContent.file_id_drive && (
-                  <a href={`https://drive.google.com/file/d/${selectedContent.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--blue)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    ▶ Ver video en Google Drive
+                  <a href={`https://drive.google.com/file/d/${selectedContent.file_id_drive}/view`} target="_blank" rel="noreferrer"
+                    style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: 'var(--blue)', textDecoration: 'none' }}>
+                    ▶ Ver video en Google Drive ↗
                   </a>
                 )}
               </div>
+              <span onClick={() => setSelectedContent(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20, flexShrink: 0 }}>✕</span>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-              {[`Gancho: ${selectedContent.score_gancho}/10`, `Claridad: ${selectedContent.score_claridad}/10`, `CTA: ${selectedContent.score_cta}/10`, `Promedio: ${selectedContent.score_promedio}/10`].map((s, i) => (
-                <span key={s} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: i === 3 ? 'rgba(45,212,160,0.15)' : 'rgba(201,168,76,0.15)', color: i === 3 ? 'var(--green)' : 'var(--gold)' }}>{s}</span>
+
+            {/* Bloques por red */}
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { meta: RED_META.instagram, titulo: selectedContent.ig_titulo, desc: selectedContent.ig_descripcion, extra: selectedContent.ig_hashtags ? `#️⃣ ${selectedContent.ig_hashtags}` : '' },
+                { meta: RED_META.tiktok,    titulo: selectedContent.tt_titulo,  desc: selectedContent.tt_descripcion },
+                { meta: RED_META.youtube,   titulo: selectedContent.yt_titulo,  desc: selectedContent.yt_descripcion, extra: selectedContent.yt_keywords ? `🔑 ${selectedContent.yt_keywords}` : '' },
+                { meta: RED_META.linkedin,  titulo: selectedContent.li_titulo,  desc: selectedContent.li_descripcion },
+                { meta: RED_META.facebook,  titulo: 'Facebook',                 desc: selectedContent.fb_descripcion },
+                { meta: RED_META.twitter,   titulo: selectedContent.tw_texto },
+                { meta: RED_META.threads,   titulo: selectedContent.th_texto },
+              ].filter(r => r.titulo || r.desc).map(r => (
+                <div key={r.meta.label} style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  {/* Header de red */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: `${r.meta.color}18`, borderBottom: `1px solid ${r.meta.color}33` }}>
+                    <span style={{ fontSize: 16 }}>{r.meta.emoji}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: r.meta.color, letterSpacing: 0.5, textTransform: 'uppercase' }}>{r.meta.label}</span>
+                  </div>
+                  {/* Contenido */}
+                  <div style={{ padding: '10px 14px' }}>
+                    {r.titulo && r.titulo !== r.meta.label && (
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: r.desc ? 6 : 0, lineHeight: 1.4 }}>{r.titulo}</div>
+                    )}
+                    {r.desc && (
+                      <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.65 }}>{r.desc}</div>
+                    )}
+                    {r.extra && (
+                      <div style={{ fontSize: 11, color: 'var(--blue)', marginTop: 8, lineHeight: 1.6, wordBreak: 'break-word' }}>{r.extra}</div>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
-            {[
-              { label: '📱 Instagram', titulo: selectedContent.ig_titulo, desc: selectedContent.ig_descripcion, extra: selectedContent.ig_hashtags },
-              { label: '🎵 TikTok', titulo: selectedContent.tt_titulo, desc: selectedContent.tt_descripcion },
-              { label: '▶️ YouTube', titulo: selectedContent.yt_titulo, desc: selectedContent.yt_descripcion, extra: selectedContent.yt_keywords ? `🔑 ${selectedContent.yt_keywords}` : '' },
-              { label: '💼 LinkedIn', titulo: selectedContent.li_titulo, desc: selectedContent.li_descripcion },
-              { label: '🐦 Twitter/X', titulo: selectedContent.tw_texto },
-              { label: '🧵 Threads', titulo: selectedContent.th_texto },
-            ].filter(r => r.titulo).map(r => (
-              <div key={r.label} style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, marginBottom: 10 }}>
-                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text2)', marginBottom: 6 }}>{r.label}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: r.desc ? 4 : 0 }}>{r.titulo}</div>
-                {r.desc && <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{r.desc.substring(0, 300)}{r.desc.length > 300 ? '...' : ''}</div>}
-                {r.extra && <div style={{ fontSize: 11, color: 'var(--blue)', marginTop: 6 }}>{r.extra}</div>}
-              </div>
-            ))}
           </div>
         </div>
       )}
 
-      {/* MODAL ELIMINAR */}
+      {/* ── MODAL ELIMINAR ── */}
       {deleteModal && (
-        <div onClick={() => setDeleteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div onClick={() => setDeleteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 420, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 2, color: 'var(--red)' }}>ELIMINAR POST</div>
@@ -527,12 +562,12 @@ export default function Panel() {
             <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>
               Seleccioná las redes donde eliminar: <strong style={{ color: 'var(--text)' }}>{deleteModal.nombre}</strong>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               {['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook', 'twitter'].map(r => (
-                <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
                   <input type="checkbox" checked={deleteRedes.includes(r)}
                     onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))} />
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                  <span>{RED_META[r]?.emoji}</span> {RED_META[r]?.label}
                 </label>
               ))}
             </div>
