@@ -170,7 +170,7 @@ export default function Panel() {
       {/* Portada YouTube 16:9 — mismo alto que la fila */}
       <div style={{ width: 160, flexShrink: 0, position: 'relative', background: 'var(--bg3)', alignSelf: 'stretch' }}>
         {c.portada_youtube_path || c.portada_vertical_path ? (
-          <img src={c.portada_youtube_path || c.portada_vertical_path} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img src={c.portada_youtube_path || c.portada_vertical_path} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: 'var(--bg3)' }} />
         ) : (
           <div style={{ width: 160, height: '100%', minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: 'var(--text2)' }}>🎬</div>
         )}
