@@ -179,10 +179,10 @@ export default function Panel() {
     ]
     return (
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {/* Portada vertical 9:16 */}
-        <div style={{ position: 'relative', width: '100%', paddingTop: '177.78%', background: 'var(--bg3)', overflow: 'hidden', flexShrink: 0 }}>
+        {/* Portada 16:9 — imagen completa sin recorte */}
+        <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: '#000', overflow: 'hidden', flexShrink: 0 }}>
           {c.portada_vertical_path ? (
-            <img src={c.portada_vertical_path} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+            <img src={c.portada_vertical_path} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
           ) : (
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>🎬</div>
           )}
