@@ -202,45 +202,53 @@ export default function Panel() {
                   <StatCard label="Score promedio" value={scorePromedio} sub="del copy generado" color="var(--gold)" />
                   <StatCard label="Sistema" value={paused ? 'OFF' : 'ON'} sub={paused ? 'Pausado' : 'Activo'} color={paused ? 'var(--red)' : 'var(--green)'} />
                 </div>
-                <Card>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Videos recientes</div>
-                  {contenidos.length === 0 && (
+                {contenidos.length === 0 && (
+                  <Card>
                     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>
                       No hay contenidos todavía. Subí videos a Google Drive para empezar.
                     </div>
-                  )}
-                  {contenidos.slice(0, 10).map(c => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 14, background: 'var(--bg3)', borderRadius: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
-                      {c.portada_vertical_path ? (
-                        <img src={c.portada_vertical_path} alt="portada" style={{ width: 48, height: 85, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                      ) : (
-                        <div style={{ width: 48, height: 85, background: 'var(--bg2)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                  </Card>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  {contenidos.slice(0, 20).map(c => (
+                    <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: 'var(--bg3)', overflow: 'hidden' }}>
+                        {c.portada_vertical_path ? (
+                          <img src={c.portada_vertical_path} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>🎬</div>
+                        )}
+                        <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 700, color: (c.score_promedio || 0) >= 8 ? 'var(--green)' : 'var(--gold)' }}>
+                          {c.score_promedio}/10
+                        </div>
+                      </div>
+                      <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {c.file_id_drive ? (
-                          <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', textDecoration: 'none', display: 'block' }}>
+                          <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                             {c.ig_titulo || c.archivo} ↗
                           </a>
                         ) : (
-                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ig_titulo || c.archivo}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{c.ig_titulo || c.archivo}</div>
                         )}
-                        <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Score: {c.score_promedio}/10 · {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '-'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text2)' }}>
+                          {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '-'}
+                        </div>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           {[['ig', c.ig_publicado], ['tt', c.tt_publicado], ['yt', c.yt_publicado], ['li', c.li_publicado], ['fb', c.fb_publicado], ['tw', c.tw_publicado]].map(([r, pub]) => (
-                            <div key={r as string} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'var(--bg2)' }}>
-                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: pub ? 'var(--green)' : 'var(--text2)' }} />
+                            <div key={r as string} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'var(--bg3)', fontWeight: 600 }}>
+                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: pub ? 'var(--green)' : 'var(--text2)' }} />
                               {(r as string).toUpperCase()}
                             </div>
                           ))}
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <Btn onClick={() => setSelectedContent(c)}>Copy</Btn>
-                        <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })}>🗑</Btn>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 4 }}>
+                          <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center' }}>Ver copy</Btn>
+                          <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })}>🗑</Btn>
+                        </div>
                       </div>
                     </div>
                   ))}
-                </Card>
+                </div>
               </div>
             )}
 
