@@ -217,7 +217,13 @@ export default function Panel() {
                         <div style={{ width: 48, height: 85, background: 'var(--bg2)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ig_titulo || c.archivo}</div>
+                        {c.file_id_drive ? (
+                          <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', textDecoration: 'none', display: 'block' }}>
+                            {c.ig_titulo || c.archivo} ↗
+                          </a>
+                        ) : (
+                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ig_titulo || c.archivo}</div>
+                        )}
                         <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Score: {c.score_promedio}/10 · {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '-'}</div>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           {[['ig', c.ig_publicado], ['tt', c.tt_publicado], ['yt', c.yt_publicado], ['li', c.li_publicado], ['fb', c.fb_publicado], ['tw', c.tw_publicado]].map(([r, pub]) => (
@@ -229,7 +235,7 @@ export default function Panel() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <Btn onClick={() => setSelectedContent(c)}>Ver</Btn>
+                        <Btn onClick={() => setSelectedContent(c)}>Copy</Btn>
                         <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })}>🗑</Btn>
                       </div>
                     </div>
