@@ -40,6 +40,7 @@ type Contenido = {
   fb_publicado: boolean
   tw_publicado: boolean
   portada_vertical_path: string
+  portada_youtube_path: string
 }
 
 type Config = { parametro: string; valor: string }
@@ -166,16 +167,16 @@ export default function Panel() {
   // Componente tarjeta de video
   const VideoCard = ({ c }: { c: Contenido }) => (
     <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', gap: 0, overflow: 'hidden' }}>
-      {/* Portada vertical */}
-      <div style={{ width: 80, flexShrink: 0, position: 'relative', background: 'var(--bg3)' }}>
-        {c.portada_vertical_path ? (
-          <img src={c.portada_vertical_path} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', minHeight: 142 }} />
+      {/* Portada YouTube 16:9 — mismo alto que la fila */}
+      <div style={{ width: 160, flexShrink: 0, position: 'relative', background: 'var(--bg3)', alignSelf: 'stretch' }}>
+        {c.portada_youtube_path || c.portada_vertical_path ? (
+          <img src={c.portada_youtube_path || c.portada_vertical_path} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : (
-          <div style={{ width: 80, minHeight: 142, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: 'var(--text2)' }}>🎬</div>
+          <div style={{ width: 160, height: '100%', minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: 'var(--text2)' }}>🎬</div>
         )}
         {/* Score badge */}
         <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center' }}>
-          <span style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 10, padding: '2px 7px', fontSize: 11, fontWeight: 700, color: (c.score_promedio || 0) >= 8 ? 'var(--green)' : 'var(--gold)' }}>
+          <span style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 10, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: (c.score_promedio || 0) >= 8 ? 'var(--green)' : 'var(--gold)' }}>
             {c.score_promedio || '—'}
           </span>
         </div>
