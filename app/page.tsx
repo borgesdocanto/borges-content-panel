@@ -12,6 +12,7 @@ type Contenido = {
   id: string
   archivo: string
   file_id_drive: string
+  portada_vertical_path: string
   estado: string
   fecha_aprobacion: string
   score_promedio: number
@@ -210,7 +211,11 @@ export default function Panel() {
                   )}
                   {contenidos.slice(0, 10).map(c => (
                     <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 14, background: 'var(--bg3)', borderRadius: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
-                      <div style={{ width: 48, height: 85, background: 'var(--bg2)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
+                      {c.portada_vertical_path ? (
+                        <img src={c.portada_vertical_path} alt="portada" style={{ width: 48, height: 85, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 48, height: 85, background: 'var(--bg2)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎬</div>
+                      )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ig_titulo || c.archivo}</div>
                         <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Score: {c.score_promedio}/10 · {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '-'}</div>
@@ -458,6 +463,20 @@ export default function Panel() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 2, color: 'var(--gold)' }}>VER CONTENIDO</div>
               <span onClick={() => setSelectedContent(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
+            </div>
+            {/* Portada + link Drive */}
+            <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'flex-start' }}>
+              {selectedContent.portada_vertical_path && (
+                <img src={selectedContent.portada_vertical_path} alt="portada" style={{ width: 80, height: 142, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{selectedContent.ig_titulo || selectedContent.archivo}</div>
+                {selectedContent.file_id_drive && (
+                  <a href={`https://drive.google.com/file/d/${selectedContent.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--blue)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    ▶ Ver video en Google Drive
+                  </a>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
               {[`Gancho: ${selectedContent.score_gancho}/10`, `Claridad: ${selectedContent.score_claridad}/10`, `CTA: ${selectedContent.score_cta}/10`, `Promedio: ${selectedContent.score_promedio}/10`].map((s, i) => (

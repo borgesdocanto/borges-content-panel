@@ -13,16 +13,25 @@
   --purple: #a855f7;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-body {
-  background: var(--bg);
-  color: var(--text);
+html, body {
+  background: #0a0a0b !important;
+  background-color: #0a0a0b !important;
+  color: #e8e8ee;
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-track { background: #0a0a0b; }
+::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 3px; }
+
+input, button, select, textarea {
+  font-family: inherit;
+}
