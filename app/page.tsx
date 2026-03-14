@@ -179,10 +179,10 @@ export default function Panel() {
     ]
     return (
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {/* Portada — aspect ratio 9:16 vertical, imagen completa */}
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '9/16', background: 'var(--bg3)', overflow: 'hidden', flexShrink: 0, maxHeight: 240 }}>
-          {portada ? (
-            <img src={portada} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+        {/* Portada vertical 9:16 */}
+        <div style={{ position: 'relative', width: '100%', paddingTop: '177.78%', background: 'var(--bg3)', overflow: 'hidden', flexShrink: 0 }}>
+          {c.portada_vertical_path ? (
+            <img src={c.portada_vertical_path} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
           ) : (
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>🎬</div>
           )}
@@ -285,7 +285,7 @@ export default function Panel() {
                 {contenidos.length === 0 ? (
                   <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>No hay contenidos. Subí videos a Google Drive.</div></Card>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                     {contenidos.slice(0, 21).map(c => <VideoCard key={c.id} c={c} />)}
                   </div>
                 )}
@@ -309,7 +309,7 @@ export default function Panel() {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                   {contenidosFiltrados.map(c => <VideoCard key={c.id} c={c} />)}
                 </div>
               </div>
