@@ -434,11 +434,11 @@ export default function Panel() {
                   <Card>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Horarios de publicación</div>
                     {[
-                      { label: 'Instagram', red: 'instagram', sub: 'Día 1', key: 'hora_instagram', default: '19:00' },
-                      { label: 'TikTok + Facebook + Threads', red: 'tiktok', sub: 'Día 2', key: 'hora_tiktok', default: '20:00' },
-                      { label: 'YouTube Shorts', red: 'youtube', sub: 'Día 3', key: 'hora_youtube', default: '10:00' },
-                      { label: 'LinkedIn', red: 'linkedin', sub: 'Día 4', key: 'hora_linkedin', default: '12:00' },
-                      { label: 'Twitter/X', red: 'twitter', sub: 'Día 5', key: 'hora_twitter', default: '09:00' },
+                      { label: 'Instagram', red: 'instagram', sub: 'Día 1', key: 'hora_instagram', default: '20:00' },
+                      { label: 'TikTok + Facebook + Threads', red: 'tiktok', sub: 'Día 2', key: 'hora_tiktok', default: '18:00' },
+                      { label: 'YouTube Shorts', red: 'youtube', sub: 'Día 2', key: 'hora_youtube', default: '21:00' },
+                      { label: 'LinkedIn', red: 'linkedin', sub: 'Día 2', key: 'hora_linkedin', default: '10:00' },
+                      { label: 'Twitter/X', red: 'twitter', sub: 'Día 2', key: 'hora_twitter', default: '21:00' },
                     ].map(item => (
                       <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -618,7 +618,7 @@ export default function Panel() {
               Seleccioná las redes donde eliminar: <strong style={{ color: 'var(--text)' }}>{deleteModal.nombre}</strong>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {['instagram','tiktok','youtube','linkedin','facebook','twitter'].map(r => (
+              {['instagram','tiktok','youtube','linkedin','facebook','twitter','threads'].map(r => (
                 <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
                   <input type="checkbox" checked={deleteRedes.includes(r)} onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))} />
                   <SvgIcon red={r} size={16} />
