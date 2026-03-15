@@ -221,24 +221,21 @@ export default function Panel() {
           <div style={{ fontSize: 11, color: 'var(--text2)' }}>
             {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '—'}
           </div>
-          {/* Redes con SVG y fecha */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {redes.map(({ key, pub, red, fecha }) => (
-                <div key={key} title={`${RED_META[red]?.label}: ${pub ? 'Publicado' : 'Pendiente'}`} style={{
-                  display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 7,
-                  background: pub ? `${RED_META[red]?.color}22` : 'rgba(120,120,120,0.08)',
-                  border: `1.5px solid ${pub ? RED_META[red]?.color + '90' : 'rgba(120,120,120,0.2)'}`,
-                }}>
-                  <span style={{ color: pub ? RED_META[red]?.color : 'rgba(180,180,180,0.35)', display: 'flex' }}>
-                    <SvgIcon red={red} size={14} />
-                  </span>
-                  <span style={{ fontSize: 10, fontWeight: 900, color: pub ? '#4ade80' : 'rgba(180,180,180,0.3)', lineHeight: 1 }}>
-                    {pub ? '✓' : '○'}
-                  </span>
-                </div>
-              ))}
-            </div>
+          {/* Redes con SVG */}
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {redes.map(({ key, pub, red, fecha, label }) => (
+              <div key={key} title={pub ? `${label}: publicado${fecha ? ' el ' + new Date(fecha).toLocaleDateString('es-AR') : ''}` : `${label}: pendiente`} style={{
+                display: 'flex', alignItems: 'center', gap: 3, padding: '4px 7px', borderRadius: 6,
+                background: pub ? `${RED_META[red]?.color}18` : '#1e1e26',
+                border: `1px solid ${pub ? RED_META[red]?.color + '70' : '#2e2e38'}`,
+              }}>
+                {pub
+                  ? <span style={{ display: 'flex', color: RED_META[red]?.color }}><SvgIcon red={red} size={14} /></span>
+                  : <span dangerouslySetInnerHTML={{ __html: (GRAY_SVG[red]||'') }} style={{ width: 14, height: 14, display: 'flex' }} />
+                }
+                {pub && <span style={{ fontSize: 10, fontWeight: 900, color: '#22c55e', lineHeight: 1 }}>✓</span>}
+              </div>
+            ))}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
             <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
