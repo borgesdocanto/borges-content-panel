@@ -18,9 +18,9 @@ type Contenido = {
   li_titulo: string; li_descripcion: string
   fb_descripcion: string; tw_texto: string; th_texto: string
   ig_publicado: boolean; tt_publicado: boolean; yt_publicado: boolean
-  li_publicado: boolean; fb_publicado: boolean; tw_publicado: boolean
+  li_publicado: boolean; fb_publicado: boolean; tw_publicado: boolean; th_publicado: boolean
   ig_post_id: string; tt_post_id: string; yt_post_id: string
-  li_post_id: string; fb_post_id: string; tw_post_id: string
+  li_post_id: string; fb_post_id: string; tw_post_id: string; th_post_id: string
   portada_vertical_path: string; portada_youtube_path: string
   fecha_programada_ig: string; fecha_programada_tt: string; fecha_programada_yt: string
   fecha_programada_li: string; fecha_programada_fb: string; fecha_programada_tw: string; fecha_programada_th: string
