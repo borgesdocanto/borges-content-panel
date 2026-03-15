@@ -482,29 +482,99 @@ export default function Panel() {
               <span onClick={() => setSelectedContent(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20, flexShrink: 0 }}>✕</span>
             </div>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { red: 'instagram', titulo: selectedContent.ig_titulo, desc: selectedContent.ig_descripcion, extra: selectedContent.ig_hashtags ? selectedContent.ig_hashtags : '' },
-                { red: 'tiktok',    titulo: selectedContent.tt_titulo,  desc: selectedContent.tt_descripcion },
-                { red: 'youtube',   titulo: selectedContent.yt_titulo,  desc: selectedContent.yt_descripcion, extra: selectedContent.yt_keywords ? `🔑 ${selectedContent.yt_keywords}` : '' },
-                { red: 'linkedin',  titulo: selectedContent.li_titulo,  desc: selectedContent.li_descripcion },
-                { red: 'facebook',  titulo: 'Facebook',                 desc: selectedContent.fb_descripcion },
-                { red: 'twitter',   titulo: selectedContent.tw_texto },
-                { red: 'threads',   titulo: selectedContent.th_texto },
-              ].filter(r => (r.titulo && r.titulo !== RED_META[r.red]?.label) || r.desc).map(r => (
-                <div key={r.red} style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META[r.red]?.color}18`, borderBottom: `1px solid ${RED_META[r.red]?.color}33` }}>
-                    <SvgIcon red={r.red} size={18} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META[r.red]?.color, letterSpacing: 0.5, textTransform: 'uppercase' }}>{RED_META[r.red]?.label}</span>
+              {/* INSTAGRAM */}
+              {(selectedContent.ig_titulo || selectedContent.ig_descripcion) && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.instagram.color}18`, borderBottom: `1px solid ${RED_META.instagram.color}33` }}>
+                    <SvgIcon red="instagram" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.instagram.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>Instagram</span>
                   </div>
                   <div style={{ padding: '12px 14px' }}>
-                    {r.titulo && r.titulo !== RED_META[r.red]?.label && (
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: r.desc ? 8 : 0, lineHeight: 1.4, color: 'var(--text)' }}>{r.titulo}</div>
-                    )}
-                    {r.desc && <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>{r.desc}</div>}
-                    {r.extra && <div style={{ fontSize: 12, color: 'var(--blue)', marginTop: 8, lineHeight: 1.6, wordBreak: 'break-word' }}>{r.extra}</div>}
+                    {selectedContent.ig_titulo && <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{selectedContent.ig_titulo}</div>}
+                    {selectedContent.ig_descripcion && <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 8 }}>{selectedContent.ig_descripcion}</div>}
+                    {selectedContent.ig_hashtags && <div style={{ fontSize: 12, color: '#a78bfa', lineHeight: 1.8, wordBreak: 'break-word' }}>{selectedContent.ig_hashtags}</div>}
                   </div>
                 </div>
-              ))}
+              )}
+              {/* TIKTOK */}
+              {(selectedContent.tt_titulo || selectedContent.tt_descripcion) && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.tiktok.color}18`, borderBottom: `1px solid ${RED_META.tiktok.color}33` }}>
+                    <SvgIcon red="tiktok" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.tiktok.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>TikTok</span>
+                  </div>
+                  <div style={{ padding: '12px 14px' }}>
+                    {selectedContent.tt_titulo && <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{selectedContent.tt_titulo}</div>}
+                    {selectedContent.tt_descripcion && <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 8 }}>{selectedContent.tt_descripcion}</div>}
+                    {selectedContent.tt_hashtags && <div style={{ fontSize: 12, color: '#a78bfa', lineHeight: 1.8, wordBreak: 'break-word' }}>{selectedContent.tt_hashtags}</div>}
+                  </div>
+                </div>
+              )}
+              {/* YOUTUBE */}
+              {(selectedContent.yt_titulo || selectedContent.yt_descripcion) && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.youtube.color}18`, borderBottom: `1px solid ${RED_META.youtube.color}33` }}>
+                    <SvgIcon red="youtube" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.youtube.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>YouTube</span>
+                  </div>
+                  <div style={{ padding: '12px 14px' }}>
+                    {selectedContent.yt_titulo && <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{selectedContent.yt_titulo}</div>}
+                    {selectedContent.yt_descripcion && <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 8 }}>{selectedContent.yt_descripcion}</div>}
+                    {selectedContent.yt_hashtags && <div style={{ fontSize: 12, color: '#a78bfa', lineHeight: 1.8, wordBreak: 'break-word', marginBottom: 6 }}>{selectedContent.yt_hashtags}</div>}
+                    {selectedContent.yt_keywords && <div style={{ fontSize: 12, color: 'var(--blue)', lineHeight: 1.6, wordBreak: 'break-word' }}>🔑 {selectedContent.yt_keywords}</div>}
+                  </div>
+                </div>
+              )}
+              {/* LINKEDIN */}
+              {(selectedContent.li_titulo || selectedContent.li_descripcion) && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.linkedin.color}18`, borderBottom: `1px solid ${RED_META.linkedin.color}33` }}>
+                    <SvgIcon red="linkedin" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.linkedin.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>LinkedIn</span>
+                  </div>
+                  <div style={{ padding: '12px 14px' }}>
+                    {selectedContent.li_titulo && <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{selectedContent.li_titulo}</div>}
+                    {selectedContent.li_descripcion && <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 8 }}>{selectedContent.li_descripcion}</div>}
+                    {selectedContent.li_hashtags && <div style={{ fontSize: 12, color: '#a78bfa', lineHeight: 1.8, wordBreak: 'break-word' }}>{selectedContent.li_hashtags}</div>}
+                  </div>
+                </div>
+              )}
+              {/* FACEBOOK */}
+              {selectedContent.fb_descripcion && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.facebook.color}18`, borderBottom: `1px solid ${RED_META.facebook.color}33` }}>
+                    <SvgIcon red="facebook" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.facebook.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>Facebook</span>
+                  </div>
+                  <div style={{ padding: '12px 14px' }}>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>{selectedContent.fb_descripcion}</div>
+                  </div>
+                </div>
+              )}
+              {/* TWITTER */}
+              {selectedContent.tw_texto && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.twitter.color}18`, borderBottom: `1px solid ${RED_META.twitter.color}33` }}>
+                    <SvgIcon red="twitter" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.twitter.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>Twitter/X</span>
+                  </div>
+                  <div style={{ padding: '12px 14px' }}>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>{selectedContent.tw_texto}</div>
+                  </div>
+                </div>
+              )}
+              {/* THREADS */}
+              {selectedContent.th_texto && (
+                <div style={{ background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: `${RED_META.threads.color}18`, borderBottom: `1px solid ${RED_META.threads.color}33` }}>
+                    <SvgIcon red="threads" size={18} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RED_META.threads.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>Threads</span>
+                  </div>
+                  <div style={{ padding: '12px 14px' }}>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>{selectedContent.th_texto}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
