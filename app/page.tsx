@@ -186,8 +186,8 @@ export default function Panel() {
     : contenidos.filter(c => filtroRed === 'instagram' ? c.ig_titulo : filtroRed === 'tiktok' ? c.tt_titulo : filtroRed === 'youtube' ? c.yt_titulo : filtroRed === 'linkedin' ? c.li_titulo : true)
 
   // SVG icon helper
-  const SvgIcon = ({ red, size = 18 }: { red: string; size?: number }) => (
-    <span style={{ width: size, height: size, display: 'inline-flex', flexShrink: 0, color: RED_META[red]?.color }}
+  const SvgIcon = ({ red, size = 18, redOverride }: { red: string; size?: number; redOverride?: string }) => (
+    <span style={{ width: size, height: size, display: 'inline-flex', flexShrink: 0, color: redOverride || RED_META[red]?.color }}
       dangerouslySetInnerHTML={{ __html: RED_META[red]?.svg || '' }} />
   )
 
