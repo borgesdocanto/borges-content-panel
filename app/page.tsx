@@ -20,6 +20,8 @@ type Contenido = {
   ig_publicado: boolean; tt_publicado: boolean; yt_publicado: boolean
   li_publicado: boolean; fb_publicado: boolean; tw_publicado: boolean
   portada_vertical_path: string; portada_youtube_path: string
+  fecha_programada_ig: string; fecha_programada_tt: string; fecha_programada_yt: string
+  fecha_programada_li: string; fecha_programada_fb: string; fecha_programada_tw: string; fecha_programada_th: string
 }
 
 type Config = { parametro: string; valor: string }
@@ -170,12 +172,12 @@ export default function Panel() {
   const VideoCard = ({ c }: { c: Contenido }) => {
     const portada = c.portada_youtube_path || c.portada_vertical_path
     const redes = [
-      { key: 'ig', pub: c.ig_publicado, red: 'instagram' },
-      { key: 'tt', pub: c.tt_publicado, red: 'tiktok' },
-      { key: 'yt', pub: c.yt_publicado, red: 'youtube' },
-      { key: 'li', pub: c.li_publicado, red: 'linkedin' },
-      { key: 'fb', pub: c.fb_publicado, red: 'facebook' },
-      { key: 'tw', pub: c.tw_publicado, red: 'twitter' },
+      { key: 'ig', pub: c.ig_publicado, red: 'instagram', fecha: c.fecha_programada_ig },
+      { key: 'tt', pub: c.tt_publicado, red: 'tiktok',    fecha: c.fecha_programada_tt },
+      { key: 'yt', pub: c.yt_publicado, red: 'youtube',   fecha: c.fecha_programada_yt },
+      { key: 'li', pub: c.li_publicado, red: 'linkedin',  fecha: c.fecha_programada_li },
+      { key: 'fb', pub: c.fb_publicado, red: 'facebook',  fecha: c.fecha_programada_fb },
+      { key: 'tw', pub: c.tw_publicado, red: 'twitter',   fecha: c.fecha_programada_tw },
     ]
     return (
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -203,20 +205,22 @@ export default function Panel() {
           <div style={{ fontSize: 11, color: 'var(--text2)' }}>
             {c.fecha_aprobacion ? new Date(c.fecha_aprobacion).toLocaleDateString('es-AR') : '—'}
           </div>
-          {/* Redes con SVG */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {redes.map(({ key, pub, red }) => (
-              <div key={key} title={`${RED_META[red]?.label}: ${pub ? 'Publicado' : 'Pendiente'}`} style={{
-                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 8,
-                background: pub ? `${RED_META[red]?.color}20` : 'var(--bg3)',
-                border: `1px solid ${pub ? RED_META[red]?.color + '50' : 'var(--border)'}`,
-              }}>
-                <SvgIcon red={red} size={16} />
-                <span style={{ fontSize: 9, fontWeight: 700, color: pub ? RED_META[red]?.color : 'var(--text2)' }}>
-                  {pub ? '✓' : '○'}
-                </span>
-              </div>
-            ))}
+          {/* Redes con SVG y fecha */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {redes.map(({ key, pub, red, fecha }) => (
+                <div key={key} title={`${RED_META[red]?.label}: ${pub ? 'Publicado' : fecha ? 'Programado ' + new Date(fecha).toLocaleDateString('es-AR') : 'Pendiente'}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8,
+                  background: pub ? `${RED_META[red]?.color}20` : fecha ? 'rgba(201,168,76,0.1)' : 'var(--bg3)',
+                  border: `1px solid ${pub ? RED_META[red]?.color + '50' : fecha ? 'rgba(201,168,76,0.4)' : 'var(--border)'}`,
+                }}>
+                  <SvgIcon red={red} size={14} />
+                  <span style={{ fontSize: 9, fontWeight: 700, color: pub ? RED_META[red]?.color : fecha ? 'var(--gold)' : 'var(--text2)' }}>
+                    {pub ? '✓' : fecha ? new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) : '○'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
             <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
