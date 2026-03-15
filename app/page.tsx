@@ -194,6 +194,7 @@ export default function Panel() {
       { key: 'li', pub: c.li_publicado, red: 'linkedin',  fecha: c.fecha_programada_li, label: 'LinkedIn' },
       { key: 'fb', pub: c.fb_publicado, red: 'facebook',  fecha: c.fecha_programada_fb, label: 'Facebook' },
       { key: 'tw', pub: c.tw_publicado, red: 'twitter',   fecha: c.fecha_programada_tw, label: 'Twitter/X' },
+      { key: 'th', pub: c.th_publicado, red: 'threads',   fecha: c.fecha_programada_th, label: 'Threads' },
     ]
     return (
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -435,7 +436,8 @@ export default function Panel() {
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Horarios de publicación</div>
                     {[
                       { label: 'Instagram', red: 'instagram', sub: 'Día 1', key: 'hora_instagram', default: '20:00' },
-                      { label: 'TikTok + Facebook + Threads', red: 'tiktok', sub: 'Día 2', key: 'hora_tiktok', default: '18:00' },
+                      { label: 'TikTok + Facebook', red: 'tiktok', sub: 'Día 2', key: 'hora_tiktok', default: '18:00' },
+                      { label: 'Threads', red: 'threads', sub: 'Día 2', key: 'hora_threads', default: '18:00' },
                       { label: 'YouTube Shorts', red: 'youtube', sub: 'Día 2', key: 'hora_youtube', default: '21:00' },
                       { label: 'LinkedIn', red: 'linkedin', sub: 'Día 2', key: 'hora_linkedin', default: '10:00' },
                       { label: 'Twitter/X', red: 'twitter', sub: 'Día 2', key: 'hora_twitter', default: '21:00' },
