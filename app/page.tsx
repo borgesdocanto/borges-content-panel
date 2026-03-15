@@ -188,12 +188,12 @@ export default function Panel() {
   const VideoCard = ({ c }: { c: Contenido }) => {
     const portada = c.portada_youtube_path || c.portada_vertical_path
     const redes = [
-      { key: 'ig', pub: c.ig_publicado, red: 'instagram', fecha: c.fecha_programada_ig },
-      { key: 'tt', pub: c.tt_publicado, red: 'tiktok',    fecha: c.fecha_programada_tt },
-      { key: 'yt', pub: c.yt_publicado, red: 'youtube',   fecha: c.fecha_programada_yt },
-      { key: 'li', pub: c.li_publicado, red: 'linkedin',  fecha: c.fecha_programada_li },
-      { key: 'fb', pub: c.fb_publicado, red: 'facebook',  fecha: c.fecha_programada_fb },
-      { key: 'tw', pub: c.tw_publicado, red: 'twitter',   fecha: c.fecha_programada_tw },
+      { key: 'ig', pub: c.ig_publicado, red: 'instagram', fecha: c.fecha_programada_ig, label: 'Instagram' },
+      { key: 'tt', pub: c.tt_publicado, red: 'tiktok',    fecha: c.fecha_programada_tt, label: 'TikTok' },
+      { key: 'yt', pub: c.yt_publicado, red: 'youtube',   fecha: c.fecha_programada_yt, label: 'YouTube' },
+      { key: 'li', pub: c.li_publicado, red: 'linkedin',  fecha: c.fecha_programada_li, label: 'LinkedIn' },
+      { key: 'fb', pub: c.fb_publicado, red: 'facebook',  fecha: c.fecha_programada_fb, label: 'Facebook' },
+      { key: 'tw', pub: c.tw_publicado, red: 'twitter',   fecha: c.fecha_programada_tw, label: 'Twitter/X' },
     ]
     return (
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
