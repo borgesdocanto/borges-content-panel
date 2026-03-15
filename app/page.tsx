@@ -211,14 +211,16 @@ export default function Panel() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {redes.map(({ key, pub, red, fecha }) => (
-                <div key={key} title={`${RED_META[red]?.label}: ${pub ? 'Publicado' : fecha ? 'Programado ' + new Date(fecha).toLocaleDateString('es-AR') : 'Pendiente'}`} style={{
-                  display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8,
-                  background: pub ? `${RED_META[red]?.color}20` : fecha ? 'rgba(201,168,76,0.1)' : 'var(--bg3)',
-                  border: `1px solid ${pub ? RED_META[red]?.color + '50' : fecha ? 'rgba(201,168,76,0.4)' : 'var(--border)'}`,
+                <div key={key} title={`${RED_META[red]?.label}: ${pub ? 'Publicado' : 'Pendiente'}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 4, padding: '5px 8px', borderRadius: 7,
+                  background: pub ? `${RED_META[red]?.color}22` : 'rgba(120,120,120,0.08)',
+                  border: `1.5px solid ${pub ? RED_META[red]?.color + '90' : 'rgba(120,120,120,0.2)'}`,
                 }}>
-                  <SvgIcon red={red} size={14} />
-                  <span style={{ fontSize: 9, fontWeight: 700, color: pub ? RED_META[red]?.color : fecha ? 'var(--gold)' : 'var(--text2)' }}>
-                    {pub ? '✓' : fecha ? new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) : '○'}
+                  <span style={{ color: pub ? RED_META[red]?.color : 'rgba(180,180,180,0.35)', display: 'flex' }}>
+                    <SvgIcon red={red} size={14} />
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: pub ? '#4ade80' : 'rgba(180,180,180,0.3)', lineHeight: 1 }}>
+                    {pub ? '✓' : '○'}
                   </span>
                 </div>
               ))}
