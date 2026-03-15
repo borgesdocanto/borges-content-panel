@@ -262,6 +262,9 @@ export default function Panel() {
             border: `1px solid ${paused ? 'rgba(45,212,160,0.3)' : 'rgba(240,84,84,0.3)'}`,
             color: paused ? 'var(--green)' : 'var(--red)'
           }}>{paused ? '▶ REANUDAR' : '⏸ PAUSAR TODO'}</div>
+          <a href="http://n8n.borges.com.ar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
+            ⚙️ n8n
+          </a>
           <div onClick={() => supabase.auth.signOut()} style={{ padding: '8px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)' }}>
             Cerrar sesión
           </div>
