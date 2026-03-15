@@ -153,10 +153,30 @@ export default function Panel() {
 
   const confirmarEliminar = async () => {
     if (!deleteModal) return
-    const updates: Record<string, boolean> = {}
-    deleteRedes.forEach(r => { updates[`${r.slice(0,2)}_publicado`] = false })
+    const FB_TOKEN = 'EAAQN8owiUkoBQZCOqTCo7p2yVbQgCnmw3ZCZAlEqzx1DE86Kcsg3SaGVikJlzKPjTB5Exllkx0BxbEeUsaZCCz1NbZB90ePPnmf4ir48rXAWZBZCjb8cqzGO5VbxvQtRZA67BxEMiZChZAZClkwFgaMZB2S3X8SuyW4Ox10rQf0rseJgROaHDSbeYFgCJ9d0hSDc68QaK2BRyZCKMxoZBL2ZB1r0wZDZD'
+
+    // Buscar el contenido completo para obtener post IDs
+    const { data: item } = await supabase.from('contenido').select('*').eq('id', deleteModal.id).single()
+
+    // Borrar en cada red seleccionada
+    for (const red of deleteRedes) {
+      if (red === 'facebook' && item?.fb_post_id) {
+        try {
+          await fetch(`https://graph.facebook.com/v25.0/${item.fb_post_id}?access_token=${FB_TOKEN}`, { method: 'DELETE' })
+        } catch(e) { console.error('Error borrando FB:', e) }
+      }
+    }
+
+    // Limpiar Supabase
+    const updates: Record<string, any> = {}
+    deleteRedes.forEach(r => {
+      const k = r.slice(0,2)
+      updates[`${k}_publicado`] = false
+      updates[`${k}_post_id`] = null
+      updates[`fecha_programada_${k}`] = null
+    })
     await supabase.from('contenido').update(updates).eq('id', deleteModal.id)
-    setDeleteModal(null); showToast('🗑 Eliminado'); fetchData()
+    setDeleteModal(null); showToast('🗑 Eliminado de redes seleccionadas'); fetchData()
   }
 
   const scorePromedio = contenidos.length
