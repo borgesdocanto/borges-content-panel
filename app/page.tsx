@@ -118,7 +118,7 @@ export default function Panel() {
   const [paused, setPaused] = useState(false)
   const [selectedContent, setSelectedContent] = useState<Contenido | null>(null)
   const [deleteModal, setDeleteModal] = useState<{ id: string; nombre: string } | null>(null)
-  const [deleteRedes, setDeleteRedes] = useState<string[]>(['instagram'])
+  const [deleteRedes, setDeleteRedes] = useState<string[]>([])
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
@@ -239,7 +239,18 @@ export default function Panel() {
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
             <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
-            <Btn variant="danger" onClick={() => setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })} style={{ padding: '6px 10px' }}>🗑</Btn>
+            <Btn variant="danger" onClick={() => {
+              const publicadas = [
+                c.ig_publicado && 'instagram',
+                c.tt_publicado && 'tiktok',
+                c.yt_publicado && 'youtube',
+                c.li_publicado && 'linkedin',
+                c.fb_publicado && 'facebook',
+                c.tw_publicado && 'twitter',
+              ].filter(Boolean) as string[]
+              setDeleteRedes(publicadas)
+              setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })
+            }} style={{ padding: '6px 10px' }}>🗑</Btn>
           </div>
         </div>
       </div>
