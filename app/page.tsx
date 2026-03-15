@@ -164,7 +164,7 @@ export default function Panel() {
   const confirmarEliminar = async () => {
     if (!deleteModal) return
     try {
-      await fetch('http://n8n.borges.com.ar/webhook/borges-eliminar-post', {
+      await fetch('https://n8n.borges.com.ar/webhook/borges-eliminar-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contenido_id: deleteModal.id, redes: deleteRedes })
