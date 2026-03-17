@@ -316,6 +316,15 @@ export default function Panel() {
                   <StatCard label="Score promedio" value={scorePromedio} color="var(--gold)" />
                   <StatCard label="Sistema" value={paused ? 'OFF' : 'ON'} color={paused ? 'var(--red)' : 'var(--green)'} sub={paused ? 'Pausado' : 'Activo'} />
                 </div>
+                {/* ALERTA YOUTUBE 1000 SUBS */}
+                <div style={{ background: "linear-gradient(135deg, rgba(255,0,0,0.08), rgba(212,160,23,0.08))", border: "1px solid rgba(255,0,0,0.25)", borderRadius: 12, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ fontSize: 24 }}>🎉</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 3 }}>Cuando llegues a 1000 suscriptores en YouTube podés activar miniaturas personalizadas</div>
+                    <div style={{ fontSize: 12, color: "var(--text2)" }}>Las portadas que genera el sistema se van a subir como thumbnail de cada video. Avisanos cuando llegues y lo activamos.</div>
+                  </div>
+                  <a href="https://studio.youtube.com" target="_blank" rel="noreferrer" style={{ background: "rgba(255,0,0,0.15)", border: "1px solid rgba(255,0,0,0.3)", color: "#ff4444", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>YouTube Studio →</a>
+                </div>
                 {contenidos.length === 0 ? (
                   <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>No hay contenidos. Subí videos a Google Drive.</div></Card>
                 ) : (
