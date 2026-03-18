@@ -134,63 +134,66 @@ export default function Panel() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const fetchTrends = async () => {
+  const ANTHROPIC_KEY = process.env.NEXT_PUBLIC_ANTHROPIC_KEY || ''
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string>('')
+
+  const callClaude = async (prompt: string, maxTokens: number) => {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+    })
+    const data = await res.json()
+    return data.content[0].text
+  }
+
+  const loadTendencias = async () => {
+    const { data } = await supabase.from('tendencias').select('*').order('actualizado_en', { ascending: false }).limit(3)
+    if (!data) return
+    for (const row of data) {
+      if (row.tipo === 'trends') setTrends(row.datos)
+      if (row.tipo === 'hashtags') setHashtags(row.datos)
+      if (row.tipo === 'temas') setTemasSugeridos(row.datos)
+    }
+    if (data.length > 0) setUltimaActualizacion(data[0].actualizado_en)
+  }
+
+  const actualizarTodo = async () => {
     setLoadingTrends(true)
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 800, messages: [{ role: 'user', content: 'Sos un experto en marketing inmobiliario argentino. Genera 8 temas tendencia HOY en el mercado inmobiliario argentino. Para cada uno asignale un indice del 1 al 100. Responde SOLO con JSON: [{"keyword": "tema", "value": 85}]' }] })
-      })
-      const data = await res.json()
-      const raw = data.content[0].text.replace(/```json/g,'').replace(/```/g,'').trim()
-      setTrends(JSON.parse(raw))
-    } catch(e) { showToast('Error cargando tendencias') }
-    setLoadingTrends(false)
-  }
-
-  const fetchHashtags = async () => {
-    setLoadingHashtags(true)
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: 'Genera 20 hashtags que funcionan bien HOY en Instagram y TikTok para contenido inmobiliario en Argentina. Mezcla alto volumen con nicho. Responde SOLO con JSON: ["hashtag1", "hashtag2"]' }] })
-      })
-      const data = await res.json()
-      const raw = data.content[0].text.replace(/```json/g,'').replace(/```/g,'').trim()
-      setHashtags(JSON.parse(raw))
-    } catch(e) { showToast('Error cargando hashtags') }
-    setLoadingHashtags(false)
-  }
-
-  const fetchTemas = async () => {
-    setLoadingTemas(true)
-    try {
       const ultimosTitulos = contenidos.slice(0,10).map((c: Contenido) => c.ig_titulo).filter(Boolean).join(', ')
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1200, messages: [{ role: 'user', content: `Sos asistente de Leandro Borges, martillero y corredor publico 30 anos experiencia Argentina. Sus ultimos videos: ${ultimosTitulos || 'inmobiliaria'}. Tendencias: ${trends.map((t: any) => t.keyword).join(', ')}. Sugeri 5 temas para el proximo Reel corto, con gancho de max 8 palabras. SOLO JSON: [{"tema": "titulo", "gancho": "gancho portada", "justificacion": "por que ahora"}]` }] })
-      })
-      const data = await res.json()
-      const raw = data.content[0].text.replace(/```json/g,'').replace(/```/g,'').trim()
+
+      // Trends
+      const rawTrends = await callClaude('Sos experto en marketing inmobiliario argentino. Genera 8 temas tendencia en el mercado inmobiliario argentino (alquiler, venta, tasacion, creditos, inversiones, barrios). Para cada uno asignale indice 1-100. SOLO JSON sin backticks: [{"keyword": "tema", "value": 85}]', 600)
+      const trendsData = JSON.parse(rawTrends.replace(/```json/g,'').replace(/```/g,'').trim())
+      setTrends(trendsData)
+      await supabase.from('tendencias').upsert({ tipo: 'trends', datos: trendsData, actualizado_en: new Date().toISOString() }, { onConflict: 'tipo' })
+
+      // Hashtags
+      const rawHashtags = await callClaude('Genera 20 hashtags que funcionan bien en Instagram y TikTok para contenido inmobiliario en Argentina. Mezcla alto volumen con nicho. SOLO JSON sin backticks: ["hashtag1", "hashtag2"]', 400)
+      const hashtagsData = JSON.parse(rawHashtags.replace(/```json/g,'').replace(/```/g,'').trim())
+      setHashtags(hashtagsData)
+      await supabase.from('tendencias').upsert({ tipo: 'hashtags', datos: hashtagsData, actualizado_en: new Date().toISOString() }, { onConflict: 'tipo' })
+
+      // Temas
+      const rawTemas = await callClaude(`Sos asistente de Leandro Borges, martillero y corredor publico 30 anos Argentina. Sus ultimos videos: ${ultimosTitulos || 'inmobiliaria'}. Sugeri 5 temas para Reels cortos que no repitan los anteriores, con gancho max 8 palabras. SOLO JSON sin backticks: [{"tema": "titulo", "gancho": "gancho portada", "justificacion": "por que ahora en una linea"}]`, 800)
+      const raw = rawTemas.replace(/```json/g,'').replace(/```/g,'').trim()
       const s = raw.indexOf('['); const e = raw.lastIndexOf(']')
-      setTemasSugeridos(JSON.parse(raw.substring(s, e+1)))
-    } catch(e) { showToast('Error generando temas') }
-    setLoadingTemas(false)
+      const temasData = JSON.parse(raw.substring(s, e+1))
+      setTemasSugeridos(temasData)
+      await supabase.from('tendencias').upsert({ tipo: 'temas', datos: temasData, actualizado_en: new Date().toISOString() }, { onConflict: 'tipo' })
+
+      setUltimaActualizacion(new Date().toISOString())
+      showToast('Tendencias actualizadas')
+    } catch(err) { showToast('Error actualizando tendencias') }
+    setLoadingTrends(false)
   }
 
   const fetchGuion = async (tema: string) => {
     setTemaSeleccionado(tema); setLoadingGuion(true); setGuion('')
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: `Sos Leandro Borges, martillero y corredor publico 30 anos Argentina. Tono directo, cercano, con autoridad. Genera guion para video corto 60-90 segundos sobre: "${tema}". Incluye: GANCHO (3 segundos, max 10 palabras), DESARROLLO (3 puntos clave en primera persona), CIERRE con CTA. En lenguaje rioplatense natural.` }] })
-      })
-      const data = await res.json()
-      setGuion(data.content[0].text)
+      const texto = await callClaude(`Sos Leandro Borges, martillero y corredor publico 30 anos Argentina. Tono directo, cercano, con autoridad. Genera guion para video corto 60-90 segundos sobre: "${tema}". Incluye: GANCHO (3 segundos, max 10 palabras), DESARROLLO (3 puntos clave en primera persona), CIERRE con CTA. En lenguaje rioplatense natural.`, 1200)
+      setGuion(texto)
     } catch(e) { showToast('Error generando guion') }
     setLoadingGuion(false)
   }
@@ -216,6 +219,7 @@ export default function Panel() {
       setPaused(cfgMap.pausa_global === 'SI')
     }
     setLoading(false)
+    loadTendencias()
   }, [])
 
   useEffect(() => { if (authed) fetchData() }, [authed, fetchData])
@@ -512,9 +516,10 @@ export default function Panel() {
                   <Card>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Tendencias inmobiliarias</div>
-                      <button onClick={fetchTrends} disabled={loadingTrends} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingTrends ? 'Cargando...' : 'Actualizar'}</button>
+                      <button onClick={actualizarTodo} disabled={loadingTrends} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingTrends ? 'Actualizando...' : '↻ Actualizar'}</button>
                     </div>
-                    {trends.length === 0 && !loadingTrends && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar para ver tendencias del mercado.</div>}
+                    {ultimaActualizacion && <div style={{ fontSize: 10, color: 'var(--text2)', marginBottom: 8 }}>Actualizado: {new Date(ultimaActualizacion).toLocaleDateString('es-AR')}</div>}
+                    {trends.length === 0 && !loadingTrends && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar para generar tendencias con IA y guardarlas.</div>}
                     {trends.map((t: any, i: number) => (
                       <div key={i} style={{ marginBottom: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 13 }}>{t.keyword}</span><span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700 }}>{t.value}</span></div>
@@ -525,9 +530,9 @@ export default function Panel() {
                   <Card>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Hashtags recomendados</div>
-                      <button onClick={fetchHashtags} disabled={loadingHashtags} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingHashtags ? 'Cargando...' : 'Actualizar'}</button>
+                      <span style={{ fontSize: 10, color: 'var(--text2)' }}>Se actualiza junto a tendencias</span>
                     </div>
-                    {hashtags.length === 0 && !loadingHashtags && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar para ver hashtags trending.</div>}
+                    {hashtags.length === 0 && !loadingTrends && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar en Tendencias para generar hashtags.</div>}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {hashtags.map((h: string, i: number) => (
                         <span key={i} onClick={() => { navigator.clipboard.writeText('#' + h.replace('#','')); showToast('Copiado!') }} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'var(--bg3)', color: 'var(--gold)', cursor: 'pointer', border: '1px solid var(--border)' }}>#{h.replace('#','')}</span>
@@ -538,9 +543,9 @@ export default function Panel() {
                 <Card style={{ marginTop: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Temas sugeridos para tu proximo video</div>
-                    <button onClick={fetchTemas} disabled={loadingTemas} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingTemas ? 'Generando...' : 'Sugerir temas'}</button>
+                    <span style={{ fontSize: 10, color: 'var(--text2)' }}>Se genera junto a tendencias</span>
                   </div>
-                  {temasSugeridos.length === 0 && !loadingTemas && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Sugerir temas para que la IA analice tendencias y tu contenido anterior.</div>}
+                  {temasSugeridos.length === 0 && !loadingTrends && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar en Tendencias para generar sugerencias de temas.</div>}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     {temasSugeridos.map((t: any, i: number) => (
                       <div key={i} style={{ background: 'var(--bg3)', borderRadius: 10, padding: 16, border: temaSeleccionado === t.tema ? '1px solid var(--gold)' : '1px solid var(--border)' }}>
