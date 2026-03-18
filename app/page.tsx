@@ -274,6 +274,7 @@ export default function Panel() {
             { id: 'contenido', icon: '🎬', label: 'Contenido' },
             { id: 'metricas', icon: '📊', label: 'Métricas' },
             { id: 'tendencias', icon: '🔥', label: 'Tendencias' },
+            { id: 'redes', icon: '🌐', label: 'Redes Sociales' },
             { id: 'config', icon: '⚙️', label: 'Config' },
           ].map(item => (
             <div key={item.id} onClick={() => setPage(item.id)} style={{
@@ -434,6 +435,44 @@ export default function Panel() {
                     ))}
                   </div>
                 </Card>
+              </div>
+            )}
+
+            {page === 'redes' && (
+              <div>
+                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>REDES <span style={{ color: 'var(--gold)' }}>SOCIALES</span></h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+                  {[
+                    { red: 'instagram', label: 'Instagram', url: 'https://www.instagram.com/leanborges', color: '#e1306c', svg: RED_META.instagram.svg },
+                    { red: 'tiktok', label: 'TikTok', url: 'https://www.tiktok.com/@leanborges', color: '#69c9d0', svg: RED_META.tiktok.svg },
+                    { red: 'youtube', label: 'YouTube', url: 'https://www.youtube.com/@leanborges', color: '#ff0000', svg: RED_META.youtube.svg },
+                    { red: 'linkedin', label: 'LinkedIn', url: 'https://www.linkedin.com/in/leanborges', color: '#0077b5', svg: RED_META.linkedin.svg },
+                    { red: 'facebook', label: 'Facebook', url: 'https://www.facebook.com/leanborges', color: '#1877f2', svg: RED_META.facebook.svg },
+                    { red: 'twitter', label: 'Twitter / X', url: 'https://x.com/leanborges', color: '#1da1f2', svg: RED_META.twitter.svg },
+                    { red: 'threads', label: 'Threads', url: 'https://www.threads.net/@leanborges', color: '#aaaaaa', svg: RED_META.threads.svg },
+                  ].map(r => (
+                    <a key={r.red} href={r.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                      <div style={{
+                        background: 'var(--bg2)', border: `1px solid ${r.color}33`, borderRadius: 16,
+                        padding: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+                        cursor: 'pointer', transition: 'all 0.2s',
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = r.color)}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = r.color + '33')}
+                      >
+                        <div style={{ color: r.color, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <SvgIcon red={r.red} size={48} />
+                        </div>
+                        <div style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1.5, color: 'var(--text)' }}>{r.label}</div>
+                        <div style={{ fontSize: 11, color: r.color, opacity: 0.8 }}>@leanborges</div>
+                        <div style={{
+                          marginTop: 4, padding: '6px 16px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          background: r.color + '18', color: r.color, border: `1px solid ${r.color}44`
+                        }}>Ver perfil ↗</div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
 
