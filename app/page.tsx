@@ -122,8 +122,79 @@ export default function Panel() {
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [trends, setTrends] = useState<{keyword: string; value: number}[]>([])
+  const [hashtags, setHashtags] = useState<string[]>([])
+  const [loadingTrends, setLoadingTrends] = useState(false)
+  const [loadingHashtags, setLoadingHashtags] = useState(false)
+  const [temasSugeridos, setTemasSugeridos] = useState<{tema: string; gancho: string; justificacion: string}[]>([])
+  const [loadingTemas, setLoadingTemas] = useState(false)
+  const [guion, setGuion] = useState('')
+  const [loadingGuion, setLoadingGuion] = useState(false)
+  const [temaSeleccionado, setTemaSeleccionado] = useState('')
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  const fetchTrends = async () => {
+    setLoadingTrends(true)
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 800, messages: [{ role: 'user', content: 'Sos un experto en marketing inmobiliario argentino. Genera 8 temas tendencia HOY en el mercado inmobiliario argentino. Para cada uno asignale un indice del 1 al 100. Responde SOLO con JSON: [{"keyword": "tema", "value": 85}]' }] })
+      })
+      const data = await res.json()
+      const raw = data.content[0].text.replace(/```json/g,'').replace(/```/g,'').trim()
+      setTrends(JSON.parse(raw))
+    } catch(e) { showToast('Error cargando tendencias') }
+    setLoadingTrends(false)
+  }
+
+  const fetchHashtags = async () => {
+    setLoadingHashtags(true)
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: 'Genera 20 hashtags que funcionan bien HOY en Instagram y TikTok para contenido inmobiliario en Argentina. Mezcla alto volumen con nicho. Responde SOLO con JSON: ["hashtag1", "hashtag2"]' }] })
+      })
+      const data = await res.json()
+      const raw = data.content[0].text.replace(/```json/g,'').replace(/```/g,'').trim()
+      setHashtags(JSON.parse(raw))
+    } catch(e) { showToast('Error cargando hashtags') }
+    setLoadingHashtags(false)
+  }
+
+  const fetchTemas = async () => {
+    setLoadingTemas(true)
+    try {
+      const ultimosTitulos = contenidos.slice(0,10).map((c: Contenido) => c.ig_titulo).filter(Boolean).join(', ')
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1200, messages: [{ role: 'user', content: `Sos asistente de Leandro Borges, martillero y corredor publico 30 anos experiencia Argentina. Sus ultimos videos: ${ultimosTitulos || 'inmobiliaria'}. Tendencias: ${trends.map((t: any) => t.keyword).join(', ')}. Sugeri 5 temas para el proximo Reel corto, con gancho de max 8 palabras. SOLO JSON: [{"tema": "titulo", "gancho": "gancho portada", "justificacion": "por que ahora"}]` }] })
+      })
+      const data = await res.json()
+      const raw = data.content[0].text.replace(/```json/g,'').replace(/```/g,'').trim()
+      const s = raw.indexOf('['); const e = raw.lastIndexOf(']')
+      setTemasSugeridos(JSON.parse(raw.substring(s, e+1)))
+    } catch(e) { showToast('Error generando temas') }
+    setLoadingTemas(false)
+  }
+
+  const fetchGuion = async (tema: string) => {
+    setTemaSeleccionado(tema); setLoadingGuion(true); setGuion('')
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: `Sos Leandro Borges, martillero y corredor publico 30 anos Argentina. Tono directo, cercano, con autoridad. Genera guion para video corto 60-90 segundos sobre: "${tema}". Incluye: GANCHO (3 segundos, max 10 palabras), DESARROLLO (3 puntos clave en primera persona), CIERRE con CTA. En lenguaje rioplatense natural.` }] })
+      })
+      const data = await res.json()
+      setGuion(data.content[0].text)
+    } catch(e) { showToast('Error generando guion') }
+    setLoadingGuion(false)
+  }
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session))
@@ -435,6 +506,61 @@ export default function Panel() {
                     ))}
                   </div>
                 </Card>
+
+                {/* TENDENCIAS IA */}
+                <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <Card>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Tendencias inmobiliarias</div>
+                      <button onClick={fetchTrends} disabled={loadingTrends} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingTrends ? 'Cargando...' : 'Actualizar'}</button>
+                    </div>
+                    {trends.length === 0 && !loadingTrends && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar para ver tendencias del mercado.</div>}
+                    {trends.map((t: any, i: number) => (
+                      <div key={i} style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 13 }}>{t.keyword}</span><span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700 }}>{t.value}</span></div>
+                        <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2 }}><div style={{ height: 4, width: t.value + '%', background: t.value > 70 ? 'var(--green)' : t.value > 40 ? 'var(--gold)' : 'var(--text2)', borderRadius: 2 }} /></div>
+                      </div>
+                    ))}
+                  </Card>
+                  <Card>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Hashtags recomendados</div>
+                      <button onClick={fetchHashtags} disabled={loadingHashtags} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingHashtags ? 'Cargando...' : 'Actualizar'}</button>
+                    </div>
+                    {hashtags.length === 0 && !loadingHashtags && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Actualizar para ver hashtags trending.</div>}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {hashtags.map((h: string, i: number) => (
+                        <span key={i} onClick={() => { navigator.clipboard.writeText('#' + h.replace('#','')); showToast('Copiado!') }} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'var(--bg3)', color: 'var(--gold)', cursor: 'pointer', border: '1px solid var(--border)' }}>#{h.replace('#','')}</span>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+                <Card style={{ marginTop: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Temas sugeridos para tu proximo video</div>
+                    <button onClick={fetchTemas} disabled={loadingTemas} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingTemas ? 'Generando...' : 'Sugerir temas'}</button>
+                  </div>
+                  {temasSugeridos.length === 0 && !loadingTemas && <div style={{ color: 'var(--text2)', fontSize: 13 }}>Clickea Sugerir temas para que la IA analice tendencias y tu contenido anterior.</div>}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    {temasSugeridos.map((t: any, i: number) => (
+                      <div key={i} style={{ background: 'var(--bg3)', borderRadius: 10, padding: 16, border: temaSeleccionado === t.tema ? '1px solid var(--gold)' : '1px solid var(--border)' }}>
+                        <div style={{ fontFamily: 'Bebas Neue', fontSize: 16, letterSpacing: 1, marginBottom: 6 }}>{t.tema}</div>
+                        <div style={{ fontSize: 12, color: 'var(--gold)', marginBottom: 6, fontStyle: 'italic' }}>"{t.gancho}"</div>
+                        <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 12 }}>{t.justificacion}</div>
+                        <button onClick={() => fetchGuion(t.tema)} disabled={loadingGuion} style={{ width: '100%', padding: '7px 0', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--gold)', color: '#000' }}>{loadingGuion && temaSeleccionado === t.tema ? 'Generando guion...' : 'Generar guion'}</button>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                {guion && (
+                  <Card style={{ marginTop: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1 }}>Guion: {temaSeleccionado}</div>
+                      <button onClick={() => { navigator.clipboard.writeText(guion); showToast('Guion copiado') }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)' }}>Copiar</button>
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{guion}</div>
+                  </Card>
+                )}
               </div>
             )}
 
