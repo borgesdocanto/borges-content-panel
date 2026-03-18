@@ -138,9 +138,9 @@ export default function Panel() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string>('')
 
   const callClaude = async (prompt: string, maxTokens: number) => {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/claude', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
     })
     const data = await res.json()
