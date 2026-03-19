@@ -12,7 +12,7 @@ type Contenido = {
   id: string; archivo: string; file_id_drive: string; estado: string
   fecha_aprobacion: string; score_promedio: number; score_gancho: number
   score_claridad: number; score_cta: number
-  ig_titulo: string; ig_descripcion: string; ig_hashtags: string; li_hashtags: string
+  transcripcion: string; ig_titulo: string; ig_descripcion: string; ig_hashtags: string; li_hashtags: string
   tt_titulo: string; tt_descripcion: string; tt_hashtags: string
   yt_titulo: string; yt_descripcion: string; yt_hashtags: string; yt_keywords: string
   li_titulo: string; li_descripcion: string
