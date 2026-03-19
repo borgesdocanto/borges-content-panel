@@ -210,20 +210,25 @@ export default function Panel() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [{ data: cont }, { data: cfg }] = await Promise.all([
+    const USER_ID_FETCH = '27e3028e-086f-4166-b887-ab15851cbfc2'
+    const [{ data: cont }, { data: cfg }, { data: userCfg }] = await Promise.all([
       supabase.from('contenido').select('*').order('fecha_aprobacion', { ascending: false }),
-      supabase.from('config').select('*')
+      supabase.from('config').select('*'),
+      supabase.from('usuario_config').select('parametro,valor').eq('user_id', USER_ID_FETCH)
     ])
     if (cont) {
       setContenidos(cont)
       setPendientes(cont.filter((c: Contenido) => c.estado === 'pendiente_aprobacion'))
     }
+    const cfgMap: Record<string, string> = {}
     if (cfg) {
-      const cfgMap: Record<string, string> = {}
       cfg.forEach((c: Config) => { cfgMap[c.parametro] = c.valor })
-      setConfig(cfgMap)
       setPaused(cfgMap.pausa_global === 'SI')
     }
+    if (userCfg) {
+      userCfg.forEach((c: Config) => { cfgMap[c.parametro] = c.valor })
+    }
+    setConfig(cfgMap)
     setLoading(false)
     loadTendencias()
   }, [])
@@ -256,9 +261,17 @@ export default function Panel() {
     setPaused(!paused); showToast(newVal === 'SI' ? '⏸ Sistema pausado' : '▶ Sistema reanudado')
   }
 
+  const USER_ID = '27e3028e-086f-4166-b887-ab15851cbfc2'
+  const USER_CONFIG_KEYS = ['drive_carpeta_publicar', 'drive_carpeta_publicados', 'max_videos_diarios', 'autopublicacion', 'hora_instagram', 'hora_tiktok', 'hora_threads', 'hora_youtube', 'hora_linkedin', 'hora_twitter', 'dias_reposteo', 'score_reposteo', 'intervalo_horas', 'min_views']
+
   const saveConfig = async () => {
     setSaving(true)
-    await Promise.all(Object.entries(config).map(([parametro, valor]) => supabase.from('config').upsert({ parametro, valor })))
+    const userConfigEntries = Object.entries(config).filter(([k]) => USER_CONFIG_KEYS.includes(k))
+    const globalConfigEntries = Object.entries(config).filter(([k]) => !USER_CONFIG_KEYS.includes(k))
+    await Promise.all([
+      ...userConfigEntries.map(([parametro, valor]) => supabase.from('usuario_config').upsert({ user_id: USER_ID, parametro, valor }, { onConflict: 'user_id,parametro' })),
+      ...globalConfigEntries.map(([parametro, valor]) => supabase.from('config').upsert({ parametro, valor }))
+    ])
     setSaving(false); showToast('✅ Configuración guardada')
   }
 
@@ -736,6 +749,56 @@ export default function Panel() {
                     </button>
                   </Card>
                 </div>
+
+                {/* GOOGLE DRIVE */}
+                <Card style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Google Drive</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16, lineHeight: 1.6 }}>
+                    Creá dos carpetas en tu Google Drive, compartilas como <strong style={{color:'var(--text)'}}>públicas</strong> y pegá las URLs acá.<br/>
+                    Recomendamos llamarlas <strong style={{color:'var(--gold)'}}>A PUBLICAR</strong> y <strong style={{color:'var(--gold)'}}>PUBLICADOS</strong>.
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>📁 Carpeta A PUBLICAR — URL de Google Drive</div>
+                    <input type="text" placeholder="https://drive.google.com/drive/folders/..." value={config['drive_carpeta_publicar'] || ''}
+                      onChange={e => setConfig(prev => ({ ...prev, drive_carpeta_publicar: e.target.value }))}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: 6, fontSize: 13, width: '100%' }} />
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>📁 Carpeta PUBLICADOS — URL de Google Drive</div>
+                    <input type="text" placeholder="https://drive.google.com/drive/folders/..." value={config['drive_carpeta_publicados'] || ''}
+                      onChange={e => setConfig(prev => ({ ...prev, drive_carpeta_publicados: e.target.value }))}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: 6, fontSize: 13, width: '100%' }} />
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>🎬 Máximo de videos a procesar por día</div>
+                    <input type="number" min="1" max="5" value={config['max_videos_diarios'] || '2'}
+                      onChange={e => setConfig(prev => ({ ...prev, max_videos_diarios: e.target.value }))}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: 6, fontSize: 14, width: '100%' }} />
+                    <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>Plan Starter: máx 2 por día · Plan Pro: máx 5 por día</div>
+                  </div>
+                  <button onClick={saveConfig} disabled={saving} style={{ width: '100%', padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: saving ? 'var(--border)' : 'var(--gold)', color: saving ? 'var(--text2)' : '#000' }}>
+                    {saving ? 'Guardando...' : 'Guardar configuración de Drive'}
+                  </button>
+                </Card>
+
+                {/* AUTOPUBLICACION */}
+                <Card style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Publicación automática</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>Autopublicación</div>
+                      <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Si está activa, el contenido se publica sin requerir tu aprobación</div>
+                    </div>
+                    <div onClick={() => setConfig(prev => ({ ...prev, autopublicacion: prev.autopublicacion === 'true' ? 'false' : 'true' }))}
+                      style={{ width: 48, height: 26, borderRadius: 13, background: config['autopublicacion'] === 'true' ? 'var(--green)' : 'var(--border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                      <div style={{ position: 'absolute', top: 3, left: config['autopublicacion'] === 'true' ? 25 : 3, width: 20, height: 20, borderRadius: 10, background: '#fff', transition: 'left 0.2s' }} />
+                    </div>
+                  </div>
+                  <button onClick={saveConfig} disabled={saving} style={{ width: '100%', padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: saving ? 'var(--border)' : 'var(--gold)', color: saving ? 'var(--text2)' : '#000', marginTop: 16 }}>
+                    {saving ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </Card>
+
               </div>
             )}
           </>
