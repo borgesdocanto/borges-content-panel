@@ -121,6 +121,9 @@ export default function Panel() {
   const [deleteRedes, setDeleteRedes] = useState<string[]>([])
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
+  const [pendientes, setPendientes] = useState<Contenido[]>([])
+  const [editandoCopy, setEditandoCopy] = useState<Record<string, Record<string, string>>>({})
+  const [aprobando, setAprobando] = useState<string>('')
   const [toast, setToast] = useState('')
   const [trends, setTrends] = useState<{keyword: string; value: number}[]>([])
   const [hashtags, setHashtags] = useState<string[]>([])
@@ -211,7 +214,10 @@ export default function Panel() {
       supabase.from('contenido').select('*').order('fecha_aprobacion', { ascending: false }),
       supabase.from('config').select('*')
     ])
-    if (cont) setContenidos(cont)
+    if (cont) {
+      setContenidos(cont)
+      setPendientes(cont.filter((c: Contenido) => c.estado === 'pendiente_aprobacion'))
+    }
     if (cfg) {
       const cfgMap: Record<string, string> = {}
       cfg.forEach((c: Config) => { cfgMap[c.parametro] = c.valor })
@@ -223,6 +229,26 @@ export default function Panel() {
   }, [])
 
   useEffect(() => { if (authed) fetchData() }, [authed, fetchData])
+
+  const aprobarContenido = async (id: string) => {
+    setAprobando(id)
+    const edits = editandoCopy[id] || {}
+    const updates: Record<string, string> = { estado: 'aprobado', fecha_aprobacion: new Date().toISOString(), ...edits }
+    await supabase.from('contenido').update(updates).eq('id', id)
+    await fetchData()
+    showToast('Contenido aprobado')
+    setAprobando('')
+  }
+
+  const rechazarContenido = async (id: string) => {
+    await supabase.from('contenido').update({ estado: 'rechazado' }).eq('id', id)
+    await fetchData()
+    showToast('Contenido rechazado')
+  }
+
+  const updateCopy = (id: string, field: string, value: string) => {
+    setEditandoCopy(prev => ({ ...prev, [id]: { ...(prev[id] || {}), [field]: value } }))
+  }
 
   const togglePause = async () => {
     const newVal = paused ? 'NO' : 'SI'
@@ -345,6 +371,7 @@ export default function Panel() {
         </div>
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
+            { id: 'pendientes', icon: '✅', label: 'Pendientes', badge: pendientes.length },
             { id: 'cola', icon: '📋', label: 'Cola' },
             { id: 'contenido', icon: '🎬', label: 'Contenido' },
             { id: 'metricas', icon: '📊', label: 'Métricas' },
@@ -359,6 +386,7 @@ export default function Panel() {
               fontSize: 13, fontWeight: 500, marginBottom: 2
             }}>
               <span style={{ width: 20, textAlign: 'center' }}>{item.icon}</span> {item.label}
+              {(item as any).badge > 0 && <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '2px 6px' }}>{(item as any).badge}</span>}
             </div>
           ))}
         </nav>
@@ -383,6 +411,59 @@ export default function Panel() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text2)', fontSize: 14 }}>Cargando...</div>
         ) : (
           <>
+            {page === 'pendientes' && (
+              <div>
+                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 8 }}>PENDIENTES DE <span style={{ color: 'var(--gold)' }}>APROBACION</span></h2>
+                <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>{pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando tu aprobacion</div>
+                {pendientes.length === 0 && <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>No hay contenido pendiente de aprobacion.</div></Card>}
+                {pendientes.map(c => (
+                  <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, marginBottom: 20 }}>
+                    <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
+                      {c.portada_vertical_path && (
+                        <img src={`https://n8n.borges.com.ar/videos/${c.portada_vertical_path}`} alt="portada" style={{ width: 100, height: 177, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} onError={e => (e.currentTarget.style.display = 'none')} />
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 1, marginBottom: 8 }}>{c.ig_titulo || c.archivo}</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                          {[{label:'Gancho', val:c.score_gancho},{label:'Claridad', val:c.score_claridad},{label:'CTA', val:c.score_cta},{label:'Promedio', val:c.score_promedio}].map(s => (
+                            <div key={s.label} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.val||0)>=8?'rgba(45,212,160,0.15)':(s.val||0)>=6?'rgba(201,168,76,0.15)':'rgba(240,84,84,0.15)', color: (s.val||0)>=8?'var(--green)':(s.val||0)>=6?'var(--gold)':'var(--red)' }}>{s.label}: {s.val}/10</div>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, maxHeight: 80, overflow: 'hidden' }}>{c.transcripcion?.substring(0, 200)}...</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                      {[
+                        { label: 'Instagram', field: 'ig_descripcion', val: c.ig_descripcion },
+                        { label: 'TikTok', field: 'tt_descripcion', val: c.tt_descripcion },
+                        { label: 'YouTube', field: 'yt_descripcion', val: c.yt_descripcion },
+                        { label: 'LinkedIn', field: 'li_descripcion', val: c.li_descripcion },
+                        { label: 'Twitter/X', field: 'tw_texto', val: c.tw_texto },
+                        { label: 'Threads', field: 'th_texto', val: c.th_texto },
+                      ].map(r => (
+                        <div key={r.field} style={{ background: 'var(--bg3)', borderRadius: 10, padding: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{r.label}</div>
+                          <textarea
+                            defaultValue={r.val || ''}
+                            onChange={e => updateCopy(c.id, r.field, e.target.value)}
+                            style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 12, resize: 'vertical', outline: 'none', minHeight: 80, lineHeight: 1.5 }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => aprobarContenido(c.id)} disabled={aprobando === c.id} style={{ flex: 1, padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--green)', color: '#000' }}>
+                        {aprobando === c.id ? 'Aprobando...' : '✅ Aprobar y programar'}
+                      </button>
+                      <button onClick={() => rechazarContenido(c.id)} style={{ padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)' }}>
+                        ✕ Rechazar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {page === 'cola' && (
               <div>
                 <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>COLA DE <span style={{ color: 'var(--gold)' }}>PUBLICACIÓN</span></h2>
