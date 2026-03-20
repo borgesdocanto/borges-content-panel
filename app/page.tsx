@@ -51,9 +51,9 @@ const RED_META: Record<string, { color: string; label: string; svg: string }> = 
 
 const Btn = ({ onClick, children, variant = 'ghost', style = {}, disabled = false }: any) => {
   const vs: Record<string, React.CSSProperties> = {
-    ghost:  { background: 'transparent', border: '1px solid var(--border)', color: 'var(--text2)' },
-    gold:   { background: 'var(--gold)', border: 'none', color: '#000' },
-    danger: { background: 'rgba(240,84,84,0.1)', border: '1px solid rgba(240,84,84,0.3)', color: 'var(--red)' },
+    ghost:  { background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)' },
+    gold:   { background: 'var(--accent)', border: 'none', color: '#fff' },
+    danger: { background: 'rgba(232,71,42,0.08)', border: '1px solid rgba(232,71,42,0.2)', color: 'var(--red)' },
   }
   return <button onClick={onClick} disabled={disabled} style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1, ...vs[variant], ...style }}>{children}</button>
 }
@@ -63,10 +63,10 @@ const Card = ({ children, style = {} }: { children: React.ReactNode; style?: Rea
 )
 
 const StatCard = ({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color?: string }) => (
-  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, position: 'relative', overflow: 'hidden' }}>
-    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
-    <div style={{ fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{label}</div>
-    <div style={{ fontFamily: 'Bebas Neue', fontSize: 36, color: color || 'var(--text)', letterSpacing: 1, lineHeight: 1 }}>{value}</div>
+  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: color || 'var(--accent)', borderRadius: '10px 10px 0 0' }} />
+    <div style={{ fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, fontWeight: 600 }}>{label}</div>
+    <div style={{ fontFamily: 'Bebas Neue', fontSize: 36, color: color || 'var(--accent)', letterSpacing: 1, lineHeight: 1 }}>{value}</div>
     {sub && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{sub}</div>}
   </div>
 )
@@ -87,8 +87,8 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 40, width: 360, maxWidth: '90vw' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 3, color: 'var(--gold)' }}>BORGES</div>
-          <div style={{ fontSize: 11, color: 'var(--text2)', letterSpacing: 2, textTransform: 'uppercase' }}>Content System</div>
+          <div style={{ fontWeight: 800, fontSize: 24, color: 'var(--accent)' }}>PostIA</div>
+          <div style={{ fontSize: 11, color: 'var(--text2)', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 }}>Content System</div>
         </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Email</div>
@@ -111,6 +111,15 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
 
 export default function Panel() {
   const [authed, setAuthed] = useState<boolean | null>(null)
+  const [darkMode, setDarkMode] = useState(false)
+
+  const toggleDark = () => {
+    setDarkMode(prev => {
+      const next = !prev
+      document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light')
+      return next
+    })
+  }
   const [page, setPage] = useState('cola')
   const [contenidos, setContenidos] = useState<Contenido[]>([])
   const [config, setConfig] = useState<Record<string, string>>({})
@@ -377,10 +386,15 @@ export default function Panel() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
-        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, letterSpacing: 2, color: 'var(--gold)', lineHeight: 1 }}>BORGES</div>
-          <div style={{ fontSize: 11, color: 'var(--text2)', letterSpacing: 1, textTransform: 'uppercase' }}>Content System</div>
+      <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 100, boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 }}>P</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', letterSpacing: 0 }}>PostIA</div>
+              <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Content System</div>
+            </div>
+          </div>
         </div>
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
@@ -393,23 +407,29 @@ export default function Panel() {
             { id: 'config', icon: '⚙️', label: 'Config' },
           ].map(item => (
             <div key={item.id} onClick={() => setPage(item.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-              color: page === item.id ? 'var(--gold)' : 'var(--text2)',
-              background: page === item.id ? 'rgba(201,168,76,0.12)' : 'transparent',
-              fontSize: 13, fontWeight: 500, marginBottom: 2
+              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
+              color: page === item.id ? 'var(--accent)' : 'var(--text2)',
+              background: page === item.id ? 'rgba(232,71,42,0.08)' : 'transparent',
+              fontSize: 13, fontWeight: page === item.id ? 600 : 400, marginBottom: 1,
+              borderLeft: page === item.id ? '3px solid var(--accent)' : '3px solid transparent',
+              transition: 'all 0.15s'
             }}>
-              <span style={{ width: 20, textAlign: 'center' }}>{item.icon}</span> {item.label}
+              <span style={{ width: 18, textAlign: 'center', fontSize: 14 }}>{item.icon}</span> {item.label}
               {(item as any).badge > 0 && <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '2px 6px' }}>{(item as any).badge}</span>}
             </div>
           ))}
         </nav>
         <div style={{ padding: '0 12px 16px' }}>
           <div onClick={togglePause} style={{
-            padding: 12, borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 13, fontWeight: 600, marginBottom: 8,
-            background: paused ? 'rgba(45,212,160,0.1)' : 'rgba(240,84,84,0.1)',
-            border: `1px solid ${paused ? 'rgba(45,212,160,0.3)' : 'rgba(240,84,84,0.3)'}`,
-            color: paused ? 'var(--green)' : 'var(--red)'
-          }}>{paused ? '▶ REANUDAR' : '⏸ PAUSAR TODO'}</div>
+            padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 600, marginBottom: 8,
+            background: paused ? 'rgba(16,185,129,0.1)' : 'rgba(232,71,42,0.08)',
+            border: `1px solid ${paused ? 'rgba(16,185,129,0.3)' : 'rgba(232,71,42,0.2)'}`,
+            color: paused ? 'var(--green)' : 'var(--accent)'
+          }}>{paused ? '▶ Reanudar sistema' : '⏸ Pausar todo'}</div>
+          <div onClick={toggleDark} style={{
+            padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 500,
+            background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)'
+          }}>{darkMode ? '☀️ Modo claro' : '🌙 Modo oscuro'}</div>
           <a href="http://n8n.borges.com.ar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
             ⚙️ n8n
           </a>
@@ -426,7 +446,7 @@ export default function Panel() {
           <>
             {page === 'pendientes' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 8 }}>PENDIENTES DE <span style={{ color: 'var(--gold)' }}>APROBACION</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 8, color: 'var(--text)' }}>PENDIENTES DE aprobación</h2>
                 <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>{pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando tu aprobacion</div>
                 {pendientes.length === 0 && <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>No hay contenido pendiente de aprobacion.</div></Card>}
                 {pendientes.map(c => (
@@ -479,7 +499,7 @@ export default function Panel() {
 
             {page === 'cola' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>COLA DE <span style={{ color: 'var(--gold)' }}>PUBLICACIÓN</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Cola de publicación</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
                   <StatCard label="Total" value={contenidos.length} sub="contenidos" />
                   <StatCard label="Aprobados" value={contenidos.filter(c => c.estado === 'aprobado').length} color="var(--green)" />
@@ -530,7 +550,7 @@ export default function Panel() {
 
             {page === 'metricas' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>MÉTRICAS DE <span style={{ color: 'var(--gold)' }}>RENDIMIENTO</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Métricas de rendimiento</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
                   <StatCard label="Videos totales" value={contenidos.length} />
                   <StatCard label="Score promedio" value={scorePromedio} color="var(--gold)" />
@@ -560,7 +580,7 @@ export default function Panel() {
 
             {page === 'tendencias' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>TENDENCIAS E <span style={{ color: 'var(--gold)' }}>INTELIGENCIA</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Tendencias e inteligencia</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
                   <Card>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Ganchos con mayor score</div>
@@ -665,7 +685,7 @@ export default function Panel() {
 
             {page === 'redes' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>REDES <span style={{ color: 'var(--gold)' }}>SOCIALES</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Redes sociales</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
                   {[
                     { red: 'instagram', label: 'Instagram', url: 'https://www.instagram.com/leanborges', color: '#e1306c', svg: RED_META.instagram.svg },
@@ -703,7 +723,7 @@ export default function Panel() {
 
             {page === 'config' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 28 }}>CONFIGURACIÓN DEL <span style={{ color: 'var(--gold)' }}>SISTEMA</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Configuración del sistema</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <Card>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Horarios de publicación</div>

@@ -1,16 +1,41 @@
+/* TEMA CLARO (default - estilo Tokko) */
 :root {
+  --bg: #f4f5f7;
+  --bg2: #ffffff;
+  --bg3: #f0f1f3;
+  --border: #e2e4e8;
+  --accent: #e8472a;
+  --accent2: #ff6b50;
+  --text: #1a1d23;
+  --text2: #6b7280;
+  --green: #10b981;
+  --red: #e8472a;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --gold: #e8472a;
+  --gold2: #ff6b50;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* TEMA OSCURO */
+[data-theme="dark"] {
   --bg: #0a0a0b;
   --bg2: #111114;
   --bg3: #18181d;
   --border: #2a2a32;
-  --gold: #c9a84c;
-  --gold2: #e8c97a;
+  --accent: #c9a84c;
+  --accent2: #e8c97a;
   --text: #e8e8ee;
   --text2: #8888a0;
   --green: #2dd4a0;
   --red: #f05454;
   --blue: #4a9eff;
   --purple: #a855f7;
+  --gold: #c9a84c;
+  --gold2: #e8c97a;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
 }
 
 *, *::before, *::after {
@@ -20,18 +45,25 @@
 }
 
 html, body {
-  background: #0a0a0b !important;
-  background-color: #0a0a0b !important;
-  color: #e8e8ee;
-  font-family: 'DM Sans', sans-serif;
+  background: var(--bg) !important;
+  background-color: var(--bg) !important;
+  color: var(--text);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0a0a0b; }
-::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 3px; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 input, button, select, textarea {
   font-family: inherit;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
