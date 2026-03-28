@@ -269,6 +269,8 @@ export default function Panel() {
     setAprobando(id)
     const edits = editandoCopy[id] || {}
     const redes = getRedesActivas(id)
+
+    // 1. Guardar estado en Supabase
     const updates: Record<string, any> = {
       estado: 'aprobado',
       fecha_aprobacion: new Date().toISOString(),
@@ -277,7 +279,33 @@ export default function Panel() {
       ...edits
     }
     await supabase.from('contenido').update(updates).eq('id', id)
-    // Mover video de A PUBLICAR a PUBLICADOS en Drive via n8n webhook
+
+    // 2. Obtener contenido completo para publicar
+    const { data: cont } = await supabase.from('contenido').select('*').eq('id', id).single()
+
+    // 3. Publicar en Upload Post
+    if (cont) {
+      try {
+        showToast('📤 Publicando en redes...')
+        const res = await fetch('/api/publicar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contenido: cont, redes, username: 'leanborges' })
+        })
+        const result = await res.json()
+        if (result.success || result.request_id) {
+          showToast('✅ Publicado en redes correctamente')
+        } else {
+          showToast('⚠️ Error publicando: ' + (result.message || result.error || 'Error desconocido'))
+          console.error('Upload Post error:', result)
+        }
+      } catch(e) {
+        console.error('Error publicando:', e)
+        showToast('⚠️ Error de conexión con Upload Post')
+      }
+    }
+
+    // 4. Mover video en Drive
     try {
       await fetch('https://n8n.borges.com.ar/webhook/postia-mover-drive', {
         method: 'POST',
@@ -285,8 +313,8 @@ export default function Panel() {
         body: JSON.stringify({ file_id: fileIdDrive, user_id: USER_ID })
       })
     } catch(e) { console.error('Error moviendo video en Drive:', e) }
+
     await fetchData()
-    showToast('✅ Contenido aprobado y video movido a Publicados')
     setAprobando('')
   }
 
