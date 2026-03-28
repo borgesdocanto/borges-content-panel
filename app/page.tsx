@@ -244,14 +244,33 @@ export default function Panel() {
 
   useEffect(() => { if (authed) fetchData() }, [authed, fetchData])
 
-  const aprobarContenido = async (id: string) => {
+  const aprobarContenido = async (id: string, fileIdDrive: string) => {
     setAprobando(id)
     const edits = editandoCopy[id] || {}
     const updates: Record<string, string> = { estado: 'aprobado', fecha_aprobacion: new Date().toISOString(), ...edits }
     await supabase.from('contenido').update(updates).eq('id', id)
+    // Mover video de A PUBLICAR a PUBLICADOS en Drive via n8n webhook
+    try {
+      await fetch('https://n8n.borges.com.ar/webhook/postia-mover-drive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_id: fileIdDrive, user_id: USER_ID })
+      })
+    } catch(e) { console.error('Error moviendo video en Drive:', e) }
     await fetchData()
-    showToast('Contenido aprobado')
+    showToast('✅ Contenido aprobado y video movido a Publicados')
     setAprobando('')
+  }
+
+  const regenerarContenido = async (id: string) => {
+    await supabase.from('contenido').update({ estado: 'rechazado' }).eq('id', id)
+    // Reinsertar en cola para reprocesar
+    const { data: cont } = await supabase.from('contenido').select('file_id_drive, file_name, user_id').eq('id', id).single()
+    if (cont) {
+      await supabase.from('cola').insert({ user_id: cont.user_id, file_id_drive: cont.file_id_drive, file_name: cont.file_name, estado: 'pendiente' })
+    }
+    await fetchData()
+    showToast('🔄 Contenido enviado a regenerar')
   }
 
   const rechazarContenido = async (id: string) => {
@@ -398,9 +417,8 @@ export default function Panel() {
         </div>
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
-            { id: 'pendientes', icon: '✅', label: 'Pendientes', badge: pendientes.length },
-            { id: 'cola', icon: '📋', label: 'Cola' },
-            { id: 'contenido', icon: '🎬', label: 'Contenido' },
+            { id: 'pendientes', icon: '⏳', label: 'Pendientes', badge: pendientes.length },
+            { id: 'contenido', icon: '✅', label: 'Publicado' },
             { id: 'metricas', icon: '📊', label: 'Métricas' },
             { id: 'tendencias', icon: '🔥', label: 'Tendencias' },
             { id: 'redes', icon: '🌐', label: 'Redes Sociales' },
@@ -446,62 +464,94 @@ export default function Panel() {
           <>
             {page === 'pendientes' && (
               <div>
-                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 8, color: 'var(--text)' }}>PENDIENTES DE aprobación</h2>
-                <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>{pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando tu aprobacion</div>
-                {pendientes.length === 0 && <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>No hay contenido pendiente de aprobacion.</div></Card>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <h2 style={{ fontWeight: 700, fontSize: 22, color: 'var(--text)' }}>Pendientes de aprobación</h2>
+                  <div style={{ fontSize: 13, color: 'var(--text2)', background: 'var(--bg3)', padding: '6px 14px', borderRadius: 20, border: '1px solid var(--border)' }}>
+                    {pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>Revisá el copy generado, editalo si es necesario, y aprobá para mover el video a Publicados.</div>
+                {pendientes.length === 0 && (
+                  <Card>
+                    <div style={{ textAlign: 'center', padding: 48, color: 'var(--text2)' }}>
+                      <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
+                      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>Todo al día</div>
+                      <div style={{ fontSize: 13 }}>No hay contenido pendiente de aprobación.</div>
+                    </div>
+                  </Card>
+                )}
                 {pendientes.map(c => (
-                  <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, marginBottom: 20 }}>
-                    <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
+                  <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+                    {/* HEADER */}
+                    <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
                       {c.portada_vertical_path && (
-                        <img src={`https://n8n.borges.com.ar/videos/${c.portada_vertical_path}`} alt="portada" style={{ width: 100, height: 177, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} onError={e => (e.currentTarget.style.display = 'none')} />
+                        <img src={`https://n8n.borges.com.ar/videos/${c.portada_vertical_path}`} alt="portada" style={{ width: 72, height: 128, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} onError={e => (e.currentTarget.style.display = 'none')} />
                       )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{c.ig_titulo || c.archivo}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 10 }}>
-                          Generado el {c.created_at ? new Date(c.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                          {c.archivo && <span style={{ marginLeft: 8, opacity: 0.6 }}>· {c.archivo}</span>}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 6, lineHeight: 1.3 }}>{c.ig_titulo || c.archivo}</div>
+                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--text2)', marginBottom: 12 }}>
+                          <span>🕐 {c.created_at ? new Date(c.created_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                          <span>📄 {c.archivo || '—'}</span>
+                          {c.file_id_drive && (
+                            <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+                              🎬 Ver video en Drive →
+                            </a>
+                          )}
                         </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           {[{label:'Gancho', val:c.score_gancho},{label:'Claridad', val:c.score_claridad},{label:'CTA', val:c.score_cta},{label:'Promedio', val:c.score_promedio}].map(s => (
-                            <div key={s.label} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.val||0)>=8?'rgba(45,212,160,0.15)':(s.val||0)>=6?'rgba(201,168,76,0.15)':'rgba(240,84,84,0.15)', color: (s.val||0)>=8?'var(--green)':(s.val||0)>=6?'var(--gold)':'var(--red)' }}>{s.label}: {s.val}/10</div>
+                            <div key={s.label} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.val||0)>=8?'rgba(16,185,129,0.12)':(s.val||0)>=6?'rgba(232,71,42,0.1)':'rgba(239,68,68,0.12)', color: (s.val||0)>=8?'var(--green)':(s.val||0)>=6?'var(--accent)':'var(--red)', border: '1px solid currentColor' }}>{s.label}: {s.val}/10</div>
                           ))}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, maxHeight: 80, overflow: 'hidden' }}>{c.transcripcion?.substring(0, 200)}...</div>
                       </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                      {[
-                        { label: 'Instagram', field: 'ig_descripcion', val: c.ig_descripcion },
-                        { label: 'TikTok', field: 'tt_descripcion', val: c.tt_descripcion },
-                        { label: 'YouTube', field: 'yt_descripcion', val: c.yt_descripcion },
-                        { label: 'LinkedIn', field: 'li_descripcion', val: c.li_descripcion },
-                        { label: 'Twitter/X', field: 'tw_texto', val: c.tw_texto },
-                        { label: 'Threads', field: 'th_texto', val: c.th_texto },
-                      ].map(r => (
-                        <div key={r.field} style={{ background: 'var(--bg3)', borderRadius: 10, padding: 12 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{r.label}</div>
-                          <textarea
-                            defaultValue={r.val || ''}
-                            onChange={e => updateCopy(c.id, r.field, e.target.value)}
-                            style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 12, resize: 'vertical', outline: 'none', minHeight: 80, lineHeight: 1.5 }}
-                          />
-                        </div>
-                      ))}
+                    {/* TRANSCRIPCION */}
+                    <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Transcripción</div>
+                      <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>{c.transcripcion || '—'}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => aprobarContenido(c.id)} disabled={aprobando === c.id} style={{ flex: 1, padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--green)', color: '#000' }}>
-                        {aprobando === c.id ? 'Aprobando...' : '✅ Aprobar y programar'}
-                      </button>
-                      <button onClick={() => rechazarContenido(c.id)} style={{ padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)' }}>
-                        ✕ Rechazar
-                      </button>
+                    {/* COPY POR RED */}
+                    <div style={{ padding: 24 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>Copy por red — editá si es necesario</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                        {[
+                          { label: '📸 Instagram', field: 'ig_descripcion', val: c.ig_descripcion, titulo: c.ig_titulo },
+                          { label: '🎵 TikTok', field: 'tt_descripcion', val: c.tt_descripcion, titulo: c.tt_titulo },
+                          { label: '▶️ YouTube', field: 'yt_descripcion', val: c.yt_descripcion, titulo: c.yt_titulo },
+                          { label: '💼 LinkedIn', field: 'li_descripcion', val: c.li_descripcion, titulo: c.li_titulo },
+                          { label: '𝕏 Twitter/X', field: 'tw_texto', val: c.tw_texto, titulo: '' },
+                          { label: '🧵 Threads', field: 'th_texto', val: c.th_texto, titulo: '' },
+                        ].map(r => (
+                          <div key={r.field} style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{r.label}</div>
+                            {r.titulo && <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8, fontStyle: 'italic' }}>{r.titulo}</div>}
+                            <textarea
+                              defaultValue={r.val || ''}
+                              onChange={e => updateCopy(c.id, r.field, e.target.value)}
+                              style={{ width: '100%', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 12, padding: '8px 10px', resize: 'vertical', outline: 'none', lineHeight: 1.6, minHeight: 120 }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {/* BOTONES */}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => aprobarContenido(c.id, c.file_id_drive)} disabled={aprobando === c.id} style={{ flex: 1, padding: '13px 0', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: aprobando === c.id ? 'default' : 'pointer', border: 'none', background: aprobando === c.id ? 'var(--border)' : 'var(--accent)', color: '#fff', opacity: aprobando === c.id ? 0.6 : 1 }}>
+                          {aprobando === c.id ? 'Aprobando...' : '✅ Aprobar y publicar'}
+                        </button>
+                        <button onClick={() => regenerarContenido(c.id)} style={{ padding: '13px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)' }}>
+                          🔄 Regenerar
+                        </button>
+                        <button onClick={() => rechazarContenido(c.id)} style={{ padding: '13px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(232,71,42,0.3)', background: 'rgba(232,71,42,0.06)', color: 'var(--red)' }}>
+                          ✕ Rechazar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {page === 'cola' && (
+            {page === 'cola_disabled' && (
               <div>
                 <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Cola de publicación</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
@@ -531,7 +581,7 @@ export default function Panel() {
 
             {page === 'contenido' && (
               <div>
-                <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 2, marginBottom: 20 }}>HISTORIAL DE <span style={{ color: 'var(--gold)' }}>CONTENIDO</span></h2>
+                <h2 style={{ fontWeight: 700, fontSize: 22, color: 'var(--text)', marginBottom: 20 }}>Contenido publicado</h2>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                   {['todas', ...REDES].map(r => (
                     <div key={r} onClick={() => setFiltroRed(r)} style={{
