@@ -516,7 +516,7 @@ export default function Panel() {
                       <img
                         src={`https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`}
                         alt="portada"
-                        style={{ width: '100%', height: 200, objectFit: 'cover', borderTopLeftRadius: 12, borderTopRightRadius: 12, display: 'block' }}
+                        style={{ width: 'auto', height: 220, objectFit: 'contain', display: 'block', margin: '16px auto 0', maxWidth: '100%', borderRadius: 8 }}
                         onError={e => (e.currentTarget.style.display = 'none')}
                       />
                     )}
