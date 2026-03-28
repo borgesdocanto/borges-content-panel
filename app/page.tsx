@@ -490,7 +490,7 @@ export default function Panel() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 6, lineHeight: 1.3 }}>{c.ig_titulo || c.archivo}</div>
                         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--text2)', marginBottom: 12 }}>
-                          <span>🕐 {c.created_at ? new Date(c.created_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                          <span>🕐 {(() => { const ts = (c as any).created_at || (c as any).fecha_ingreso; return ts ? new Date(ts).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Sin fecha'; })()}</span>
                           <span>📄 {c.archivo || '—'}</span>
                           {c.file_id_drive && (
                             <a href={`https://drive.google.com/file/d/${c.file_id_drive}/view`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
