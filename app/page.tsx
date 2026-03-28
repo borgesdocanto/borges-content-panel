@@ -558,7 +558,7 @@ export default function Panel() {
                             {/* Header red */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${activa ? r.color + '33' : 'var(--border)'}`, background: activa ? r.color + '10' : 'transparent' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <SvgIcon red={r.redKey} size={16} redOverride={activa ? r.color : 'var(--text2)'} />
+                                <SvgIcon red={(r as any).redKey} size={16} redOverride={activa ? r.color : 'var(--text2)'} />
                                 <span style={{ fontSize: 13, fontWeight: 700, color: activa ? r.color : 'var(--text2)' }}>{r.label}</span>
                               </div>
                               <div onClick={() => toggleRed(c.id, r.key)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
