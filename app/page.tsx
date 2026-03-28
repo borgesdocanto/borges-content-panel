@@ -515,7 +515,7 @@ export default function Panel() {
                     {/* PORTADA 16:9 */}
                     {(c.portada_youtube_path || c.portada_vertical_path) && (
                       <img
-                        src={`https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`}
+                        src={`https://n8n.borges.com.ar/videos/${c.portada_vertical_path}`}
                         alt="portada"
                         style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderTopLeftRadius: 12, borderTopRightRadius: 12, display: 'block' }}
                         onError={e => (e.currentTarget.style.display = 'none')}
