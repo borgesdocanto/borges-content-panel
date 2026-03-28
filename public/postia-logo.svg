@@ -1,0 +1,17 @@
+<svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e8472a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b50;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Icono cuadrado redondeado -->
+  <rect x="0" y="10" width="100" height="100" rx="20" fill="url(#grad)"/>
+  <!-- Letra P estilizada -->
+  <text x="22" y="85" font-family="Georgia, serif" font-size="78" font-weight="900" fill="white">P</text>
+  <!-- Texto POSTIA -->
+  <text x="120" y="72" font-family="Arial, sans-serif" font-size="58" font-weight="800" fill="#1a1d23" letter-spacing="-1">POST</text>
+  <text x="288" y="72" font-family="Arial, sans-serif" font-size="58" font-weight="800" fill="url(#grad)" letter-spacing="-1">IA</text>
+  <!-- Subtítulo -->
+  <text x="121" y="95" font-family="Arial, sans-serif" font-size="16" fill="#6b7280" letter-spacing="3">CONTENT SYSTEM</text>
+</svg>

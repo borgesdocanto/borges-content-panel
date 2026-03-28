@@ -16,8 +16,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         username,
         redirect_url: 'https://content.borges.com.ar',
-        connect_title: 'Conectá tus redes sociales',
-        connect_description: 'Vinculá tus cuentas para que PostIA pueda publicar en tu nombre.',
+        logo_image: 'https://content.borges.com.ar/postia-logo.svg',
+        connect_title: 'Conectá tus redes — PostIA',
+        connect_description: 'Vinculá tus cuentas para que PostIA pueda publicar contenido en tu nombre de forma automática.',
+        redirect_button_text: 'Volver al panel',
         show_calendar: true,
       })
     })
