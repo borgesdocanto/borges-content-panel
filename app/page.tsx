@@ -350,10 +350,12 @@ export default function Panel() {
     : contenidos.filter(c => filtroRed === 'instagram' ? c.ig_titulo : filtroRed === 'tiktok' ? c.tt_titulo : filtroRed === 'youtube' ? c.yt_titulo : filtroRed === 'linkedin' ? c.li_titulo : true)
 
   // SVG icon helper
-  const SvgIcon = ({ red, size = 18, redOverride }: { red: string; size?: number; redOverride?: string }) => (
-    <span style={{ width: size, height: size, display: 'inline-flex', flexShrink: 0, color: redOverride || RED_META[red]?.color }}
-      dangerouslySetInnerHTML={{ __html: RED_META[red]?.svg || '' }} />
-  )
+  const SvgIcon = ({ red, size = 18, redOverride }: { red: string; size?: number; redOverride?: string }) => {
+    const svg = RED_META[red]?.svg || ''
+    const color = redOverride || RED_META[red]?.color || 'currentColor'
+    const colored = svg.replace(/fill="currentColor"/g, `fill="${color}"`)
+    return <span style={{ width: size, height: size, display: 'inline-flex', flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: colored }} />
+  }
 
   const VideoCard = ({ c }: { c: Contenido }) => {
     const portada = c.portada_youtube_path || c.portada_vertical_path
@@ -510,11 +512,17 @@ export default function Panel() {
                 )}
                 {pendientes.map(c => (
                   <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+                    {/* PORTADA 16:9 */}
+                    {(c.portada_youtube_path || c.portada_vertical_path) && (
+                      <img
+                        src={`https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`}
+                        alt="portada"
+                        style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderTopLeftRadius: 12, borderTopRightRadius: 12, display: 'block' }}
+                        onError={e => (e.currentTarget.style.display = 'none')}
+                      />
+                    )}
                     {/* HEADER */}
-                    <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-                      {c.portada_vertical_path && (
-                        <img src={`https://n8n.borges.com.ar/videos/${c.portada_vertical_path}`} alt="portada" style={{ width: 72, height: 128, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} onError={e => (e.currentTarget.style.display = 'none')} />
-                      )}
+                    <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 6, lineHeight: 1.3 }}>{c.ig_titulo || c.archivo}</div>
                         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--text2)', marginBottom: 12 }}>
