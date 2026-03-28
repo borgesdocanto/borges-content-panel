@@ -87,8 +87,7 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 40, width: 360, maxWidth: '90vw' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontWeight: 800, fontSize: 24, color: 'var(--accent)' }}>PostIA</div>
-          <div style={{ fontSize: 11, color: 'var(--text2)', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 }}>Content System</div>
+          <img src="/postia-logo.svg" alt="PostIA" style={{ height: 48, width: 'auto', marginBottom: 4 }} />
         </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Email</div>
@@ -465,11 +464,7 @@ export default function Panel() {
       <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 100, boxShadow: 'var(--shadow-md)' }}>
         <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 }}>P</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', letterSpacing: 0 }}>PostIA</div>
-              <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Content System</div>
-            </div>
+            <img src="/postia-logo.svg" alt="PostIA" style={{ height: 36, width: 'auto' }} />
           </div>
         </div>
         <nav style={{ padding: '16px 12px', flex: 1 }}>
