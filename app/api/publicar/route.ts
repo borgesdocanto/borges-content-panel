@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const { contenido, redes, username } = await req.json()
 
-    const videoUrl = `https://n8n.borges.com.ar/videos/${contenido.file_id_drive}.mp4`
+    const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}`
 
     const form = new FormData()
     form.append('user', username)
