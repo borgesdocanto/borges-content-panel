@@ -351,10 +351,9 @@ export default function Panel() {
 
   // SVG icon helper
   const SvgIcon = ({ red, size = 18, redOverride }: { red: string; size?: number; redOverride?: string }) => {
-    const svg = RED_META[red]?.svg || ''
+    const svg = (RED_META[red]?.svg || '').replace(/width="[^"]*"/g, `width="${size}"`).replace(/height="[^"]*"/g, `height="${size}"`)
     const color = redOverride || RED_META[red]?.color || 'currentColor'
-    const colored = svg.replace(/fill="currentColor"/g, `fill="${color}"`)
-    return <span style={{ width: size, height: size, display: 'inline-flex', flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: colored }} />
+    return <span style={{ width: size, height: size, display: 'inline-flex', flexShrink: 0, color }} dangerouslySetInnerHTML={{ __html: svg }} />
   }
 
   const VideoCard = ({ c }: { c: Contenido }) => {
