@@ -10,7 +10,7 @@ const supabase = createClient(
 
 type Contenido = {
   id: string; archivo: string; file_id_drive: string; estado: string
-  fecha_aprobacion: string; score_promedio: number; score_gancho: number
+  created_at: string; fecha_aprobacion: string; score_promedio: number; score_gancho: number
   score_claridad: number; score_cta: number
   transcripcion: string; ig_titulo: string; ig_descripcion: string; ig_hashtags: string; li_hashtags: string
   tt_titulo: string; tt_descripcion: string; tt_hashtags: string
@@ -456,7 +456,11 @@ export default function Panel() {
                         <img src={`https://n8n.borges.com.ar/videos/${c.portada_vertical_path}`} alt="portada" style={{ width: 100, height: 177, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} onError={e => (e.currentTarget.style.display = 'none')} />
                       )}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 1, marginBottom: 8 }}>{c.ig_titulo || c.archivo}</div>
+                        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{c.ig_titulo || c.archivo}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 10 }}>
+                          Generado el {c.created_at ? new Date(c.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                          {c.archivo && <span style={{ marginLeft: 8, opacity: 0.6 }}>· {c.archivo}</span>}
+                        </div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                           {[{label:'Gancho', val:c.score_gancho},{label:'Claridad', val:c.score_claridad},{label:'CTA', val:c.score_cta},{label:'Promedio', val:c.score_promedio}].map(s => (
                             <div key={s.label} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.val||0)>=8?'rgba(45,212,160,0.15)':(s.val||0)>=6?'rgba(201,168,76,0.15)':'rgba(240,84,84,0.15)', color: (s.val||0)>=8?'var(--green)':(s.val||0)>=6?'var(--gold)':'var(--red)' }}>{s.label}: {s.val}/10</div>
