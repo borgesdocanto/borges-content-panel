@@ -795,7 +795,32 @@ export default function Panel() {
 
             {page === 'redes' && (
               <div>
-                <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Redes sociales</h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                  <h2 style={{ fontWeight: 700, fontSize: 22, color: 'var(--text)' }}>Redes sociales</h2>
+                  <button
+                    onClick={async () => {
+                      const res = await fetch('/api/uploadpost-jwt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: 'leanborges' })
+                      })
+                      const data = await res.json()
+                      if (data.access_url) {
+                        window.open(data.access_url, '_blank')
+                      } else {
+                        showToast('Error generando link de conexión')
+                      }
+                    }}
+                    style={{ padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
+                    🔗 Conectar / gestionar redes
+                  </button>
+                </div>
+                <Card style={{ marginBottom: 20, background: 'rgba(232,71,42,0.06)', border: '1px solid rgba(232,71,42,0.2)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
+                    <strong>¿Cómo conectar tus redes?</strong> Hacé click en el botón de arriba para abrir la página de conexión de Upload Post. Desde ahí podés vincular Instagram, TikTok, YouTube, LinkedIn, Facebook, Twitter/X y Threads. Una vez conectadas, PostIA puede publicar en tu nombre automáticamente.
+                  </div>
+                </Card>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
                   {[
                     { red: 'instagram', label: 'Instagram', url: 'https://www.instagram.com/leanborges', color: '#e1306c', svg: RED_META.instagram.svg },
