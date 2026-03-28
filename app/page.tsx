@@ -120,7 +120,7 @@ export default function Panel() {
       return next
     })
   }
-  const [page, setPage] = useState('cola')
+  const [page, setPage] = useState('pendientes')
   const [contenidos, setContenidos] = useState<Contenido[]>([])
   const [config, setConfig] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
