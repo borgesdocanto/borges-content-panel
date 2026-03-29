@@ -399,7 +399,7 @@ export default function Panel() {
         {/* Portada 16:9 — imagen completa sin recorte */}
         <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: '#000', overflow: 'hidden', flexShrink: 0 }}>
           {(c.portada_youtube_path || c.portada_vertical_path) ? (
-            <img src={c.portada_youtube_path || c.portada_vertical_path} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+            <img src={`https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} onError={e => { e.currentTarget.style.display='none' }} />
           ) : (
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>🎬</div>
           )}
@@ -470,7 +470,7 @@ export default function Panel() {
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
             { id: 'pendientes', icon: '⏳', label: 'Pendientes', badge: pendientes.length },
-            { id: 'contenido', icon: '✅', label: 'Publicado' },
+            { id: 'publicaciones', icon: '📱', label: 'Publicaciones' },
             { id: 'metricas', icon: '📊', label: 'Métricas' },
             { id: 'tendencias', icon: '🔥', label: 'Tendencias' },
             { id: 'redes', icon: '🌐', label: 'Redes Sociales' },
@@ -678,6 +678,43 @@ export default function Panel() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                   {contenidosFiltrados.map(c => <VideoCard key={c.id} c={c} />)}
                 </div>
+              </div>
+            )}
+
+            {page === 'publicaciones' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <h2 style={{ fontWeight: 700, fontSize: 22, color: 'var(--text)' }}>Publicaciones</h2>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {['todas', ...REDES].map(r => (
+                      <div key={r} onClick={() => setFiltroRed(r)} style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        border: `1px solid ${filtroRed === r ? (RED_META[r]?.color || 'var(--accent)') : 'var(--border)'}`,
+                        color: filtroRed === r ? (RED_META[r]?.color || 'var(--accent)') : 'var(--text2)',
+                        background: filtroRed === r ? `${RED_META[r]?.color || 'var(--accent)'}18` : 'transparent'
+                      }}>
+                        {r !== 'todas' && <SvgIcon red={r} size={12} />}
+                        {r === 'todas' ? 'Todas' : RED_META[r]?.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {pendientes.length > 0 && (
+                  <div style={{ background: 'rgba(232,71,42,0.06)', border: '1px solid rgba(232,71,42,0.2)', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
+                    ⏳ {pendientes.length} video{pendientes.length !== 1 ? 's' : ''} pendiente{pendientes.length !== 1 ? 's' : ''} de aprobación
+                    <span onClick={() => setPage('pendientes')} style={{ cursor: 'pointer', textDecoration: 'underline', marginLeft: 8 }}>Ver →</span>
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  {contenidosFiltrados.map(c => <VideoCard key={c.id} c={c} />)}
+                </div>
+                {contenidosFiltrados.length === 0 && (
+                  <Card><div style={{ textAlign: 'center', padding: 48, color: 'var(--text2)' }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>📱</div>
+                    <div style={{ fontWeight: 600 }}>No hay publicaciones aún</div>
+                  </div></Card>
+                )}
               </div>
             )}
 
