@@ -406,29 +406,31 @@ export default function Panel() {
 
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       setAuthed(!!data.session)
-      if (data.session?.user) {
-        setCurrentUser(data.session.user)
-        // Verificar si necesita onboarding
-        const { data: usr } = await supabase.from('usuarios').select('upload_post_username').eq('id', data.session.user.id).single()
-        const { data: cfgArr } = await supabase.from('usuario_config').select('valor').eq('user_id', data.session.user.id).eq('parametro', 'drive_carpeta_publicar').limit(1)
-        if (!cfgArr || cfgArr.length === 0 || !cfgArr[0]?.valor) setOnboarding(true)
-      }
+      if (data.session?.user) setCurrentUser(data.session.user)
     })
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_e, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
       setAuthed(!!session)
-      if (session?.user) {
-        setCurrentUser(session.user)
-        const { data: cfgArr } = await supabase.from('usuario_config').select('valor').eq('user_id', session.user.id).eq('parametro', 'drive_carpeta_publicar').limit(1)
-        if (!cfgArr || cfgArr.length === 0 || !cfgArr[0]?.valor) setOnboarding(true)
-      } else {
-        setCurrentUser(null)
-        setOnboarding(false)
-      }
+      if (session?.user) setCurrentUser(session.user)
+      else { setCurrentUser(null); setOnboarding(false) }
     })
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  // Verificar onboarding cuando currentUser esté disponible
+  useEffect(() => {
+    if (!currentUser?.id) return
+    supabase.from('usuario_config')
+      .select('valor')
+      .eq('user_id', currentUser.id)
+      .eq('parametro', 'drive_carpeta_publicar')
+      .limit(1)
+      .then(({ data }) => {
+        if (!data || data.length === 0 || !data[0]?.valor) setOnboarding(true)
+        else setOnboarding(false)
+      })
+  }, [currentUser?.id])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
