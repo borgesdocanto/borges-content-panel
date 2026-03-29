@@ -125,7 +125,7 @@ export default function Panel() {
   const [loading, setLoading] = useState(true)
   const [paused, setPaused] = useState(false)
   const [selectedContent, setSelectedContent] = useState<Contenido | null>(null)
-  const [deleteModal, setDeleteModal] = useState<{ id: string; nombre: string } | null>(null)
+  const [deleteModal, setDeleteModal] = useState<{ id: string; nombre: string; ig_publicado?: boolean; tt_publicado?: boolean; yt_publicado?: boolean; li_publicado?: boolean; fb_publicado?: boolean; tw_publicado?: boolean; th_publicado?: boolean } | null>(null)
   const [deleteRedes, setDeleteRedes] = useState<string[]>([])
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
@@ -438,7 +438,7 @@ export default function Panel() {
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
             <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
-            <Btn variant="danger" onClick={() => {
+            <Btn variant="ghost" onClick={() => {
               const publicadas = [
                 c.ig_publicado && 'instagram',
                 c.tt_publicado && 'tiktok',
@@ -446,10 +446,11 @@ export default function Panel() {
                 c.li_publicado && 'linkedin',
                 c.fb_publicado && 'facebook',
                 c.tw_publicado && 'twitter',
+                c.th_publicado && 'threads',
               ].filter(Boolean) as string[]
-              setDeleteRedes(publicadas)
-              setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo })
-            }} style={{ padding: '6px 10px' }}>🗑</Btn>
+              setDeleteRedes([])
+              setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo, ig_publicado: c.ig_publicado, tt_publicado: c.tt_publicado, yt_publicado: c.yt_publicado, li_publicado: c.li_publicado, fb_publicado: c.fb_publicado, tw_publicado: c.tw_publicado, th_publicado: c.th_publicado })
+            }} style={{ padding: '6px 10px' }}>📡</Btn>
           </div>
         </div>
       </div>
@@ -1146,29 +1147,71 @@ export default function Panel() {
         </div>
       )}
 
-      {/* MODAL ELIMINAR */}
+      {/* MODAL GESTIONAR REDES */}
       {deleteModal && (
-        <div onClick={() => setDeleteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 420, maxWidth: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 2, color: 'var(--red)' }}>ELIMINAR POST</div>
+        <div onClick={() => setDeleteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 440, maxWidth: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>Gestionar publicación</div>
               <span onClick={() => setDeleteModal(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>
-              Seleccioná las redes donde eliminar: <strong style={{ color: 'var(--text)' }}>{deleteModal.nombre}</strong>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {['instagram','tiktok','youtube','linkedin','facebook','twitter','threads'].map(r => (
-                <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={deleteRedes.includes(r)} onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))} />
-                  <SvgIcon red={r} size={16} />
-                  {RED_META[r]?.label}
-                </label>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>{deleteModal.nombre}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Seleccioná las redes donde publicar ahora</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {[
+                { r: 'instagram', pub: deleteModal.ig_publicado, key: 'ig' },
+                { r: 'tiktok',    pub: deleteModal.tt_publicado, key: 'tt' },
+                { r: 'youtube',   pub: deleteModal.yt_publicado, key: 'yt' },
+                { r: 'linkedin',  pub: deleteModal.li_publicado, key: 'li' },
+                { r: 'facebook',  pub: deleteModal.fb_publicado, key: 'fb' },
+                { r: 'twitter',   pub: deleteModal.tw_publicado, key: 'tw' },
+                { r: 'threads',   pub: deleteModal.th_publicado, key: 'th' },
+              ].map(({ r, pub }) => (
+                <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: pub ? `${RED_META[r]?.color}10` : 'var(--bg3)', border: `1px solid ${pub ? RED_META[r]?.color + '33' : 'var(--border)'}` }}>
+                  <SvgIcon red={r} size={18} redOverride={pub ? RED_META[r]?.color : 'var(--text2)'} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: pub ? RED_META[r]?.color : 'var(--text)' }}>{RED_META[r]?.label}</span>
+                  {pub ? (
+                    <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>✓ Publicado</span>
+                  ) : (
+                    <input type="checkbox" checked={deleteRedes.includes(r)}
+                      onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))}
+                      style={{ width: 16, height: 16, cursor: 'pointer', accentColor: RED_META[r]?.color }} />
+                  )}
+                </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <Btn onClick={() => setDeleteModal(null)} style={{ flex: 1 }}>Cancelar</Btn>
-              <Btn variant="danger" onClick={confirmarEliminar} style={{ flex: 1 }}>Confirmar eliminación</Btn>
+              <button
+                disabled={deleteRedes.length === 0}
+                onClick={async () => {
+                  if (!deleteModal) return
+                  const { data: cont } = await supabase.from('contenido').select('*').eq('id', deleteModal.id).single()
+                  if (!cont) return
+                  setDeleteModal(null)
+                  showToast('📤 Publicando en redes seleccionadas...')
+                  const redesObj: Record<string, boolean> = {}
+                  deleteRedes.forEach(r => {
+                    const keyMap: Record<string, string> = { instagram: 'ig', tiktok: 'tt', youtube: 'yt', linkedin: 'li', facebook: 'fb', twitter: 'tw', threads: 'th' }
+                    if (keyMap[r]) redesObj[keyMap[r]] = true
+                  })
+                  const res = await fetch('/api/publicar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contenido: cont, redes: redesObj, username: 'leanborges' })
+                  })
+                  const result = await res.json()
+                  if (result.success || result.request_id) {
+                    showToast('✅ Publicado correctamente')
+                  } else {
+                    showToast('⚠️ Error: ' + (result.message || result.error || 'Error desconocido'))
+                  }
+                  await fetchData()
+                }}
+                style={{ flex: 2, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: deleteRedes.length === 0 ? 'default' : 'pointer', border: 'none', background: deleteRedes.length === 0 ? 'var(--border)' : 'var(--accent)', color: '#fff', opacity: deleteRedes.length === 0 ? 0.5 : 1 }}
+              >
+                Publicar ahora →
+              </button>
             </div>
           </div>
         </div>
