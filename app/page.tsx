@@ -127,6 +127,18 @@ function OnboardingPage({ userId, onComplete }: { userId: string; onComplete: ()
       uid = session?.user?.id || ''
     }
     if (!uid) { setError('Error: sesión no encontrada. Recargá la página.'); setLoading(false); return }
+    // Asegurar que el usuario existe en tabla usuarios
+    const { data: usuarioExiste } = await supabase.from('usuarios').select('id').eq('id', uid).limit(1)
+    if (!usuarioExiste || usuarioExiste.length === 0) {
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('usuarios').insert({ 
+        id: uid, 
+        email: user?.email || '', 
+        plan: 'starter', 
+        activo: true, 
+        upload_post_username: (user?.email || '').split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase() + Math.floor(Math.random() * 999)
+      })
+    }
     try {
       const results = await Promise.all([
         supabase.from('usuario_config').upsert({ user_id: uid, parametro: 'drive_carpeta_publicar', valor: drivePublicar }, { onConflict: 'user_id,parametro' }),
