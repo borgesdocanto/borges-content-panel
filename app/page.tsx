@@ -120,12 +120,24 @@ function OnboardingPage({ userId, onComplete }: { userId: string; onComplete: ()
     if (!drivePublicar || !drivePublicados) { setError('Completá ambas URLs de Drive'); return }
     if (!drivePublicar.includes('drive.google.com') || !drivePublicados.includes('drive.google.com')) { setError('Las URLs deben ser de Google Drive'); return }
     setLoading(true); setError('')
-    await Promise.all([
-      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicar', valor: drivePublicar }, { onConflict: 'user_id,parametro' }),
-      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicados', valor: drivePublicados }, { onConflict: 'user_id,parametro' }),
-      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'max_videos_diarios', valor: '2' }, { onConflict: 'user_id,parametro' }),
-      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'autopublicacion', valor: 'false' }, { onConflict: 'user_id,parametro' }),
-    ])
+    try {
+      const results = await Promise.all([
+        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicar', valor: drivePublicar }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicados', valor: drivePublicados }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'max_videos_diarios', valor: '2' }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'autopublicacion', valor: 'false' }, { onConflict: 'user_id,parametro' }),
+      ])
+      const errores = results.filter(r => r.error)
+      if (errores.length > 0) {
+        setError('Error guardando: ' + errores[0].error?.message)
+        setLoading(false)
+        return
+      }
+    } catch(e: any) {
+      setError('Error: ' + e.message)
+      setLoading(false)
+      return
+    }
     setLoading(false)
     setStep(3)
   }
