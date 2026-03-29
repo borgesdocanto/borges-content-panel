@@ -71,7 +71,7 @@ const StatCard = ({ label, value, sub, color }: { label: string; value: string |
   </div>
 )
 
-function LoginPage({ onLogin }: { onLogin: () => void }) {
+function LoginPage({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -100,9 +100,161 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
             style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
         </div>
         {error && <div style={{ background: 'rgba(240,84,84,0.1)', border: '1px solid rgba(240,84,84,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>{error}</div>}
-        <button onClick={handleLogin} disabled={loading} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', border: 'none', background: loading ? 'var(--border)' : 'var(--gold)', color: loading ? 'var(--text2)' : '#000' }}>
+        <button onClick={handleLogin} disabled={loading} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', border: 'none', background: loading ? 'var(--border)' : 'var(--accent)', color: '#fff', marginBottom: 12 }}>
           {loading ? 'Ingresando...' : 'Ingresar'}
         </button>
+        <div onClick={onRegister} style={{ textAlign: 'center', fontSize: 13, color: 'var(--text2)', cursor: 'pointer' }}>¿No tenés cuenta? <span style={{ color: 'var(--accent)' }}>Registrate</span></div>
+      </div>
+    </div>
+  )
+}
+
+function OnboardingPage({ userId, onComplete }: { userId: string; onComplete: () => void }) {
+  const [step, setStep] = useState(1)
+  const [drivePublicar, setDrivePublicar] = useState('')
+  const [drivePublicados, setDrivePublicados] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const guardar = async () => {
+    if (!drivePublicar || !drivePublicados) { setError('Completá ambas URLs de Drive'); return }
+    if (!drivePublicar.includes('drive.google.com') || !drivePublicados.includes('drive.google.com')) { setError('Las URLs deben ser de Google Drive'); return }
+    setLoading(true); setError('')
+    await Promise.all([
+      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicar', valor: drivePublicar }, { onConflict: 'user_id,parametro' }),
+      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicados', valor: drivePublicados }, { onConflict: 'user_id,parametro' }),
+      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'max_videos_diarios', valor: '2' }, { onConflict: 'user_id,parametro' }),
+      supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'autopublicacion', valor: 'false' }, { onConflict: 'user_id,parametro' }),
+    ])
+    setLoading(false)
+    setStep(3)
+  }
+
+  const conectarRedes = async () => {
+    const { data: usr } = await supabase.from('usuarios').select('upload_post_username').eq('id', userId).single()
+    if (!usr?.upload_post_username) return
+    const res = await fetch('/api/uploadpost-jwt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: usr.upload_post_username }) })
+    const data = await res.json()
+    if (data.access_url) window.open(data.access_url, '_blank')
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 40, width: 480, maxWidth: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <img src="/postia-logo.svg" alt="PostIA" style={{ height: 40, width: 'auto', marginBottom: 8 }} />
+          <div style={{ fontSize: 13, color: 'var(--text2)' }}>Configuración inicial</div>
+        </div>
+        {/* Steps */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 32, justifyContent: 'center' }}>
+          {[1,2,3].map(s => (
+            <div key={s} style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, background: step >= s ? 'var(--accent)' : 'var(--bg3)', color: step >= s ? '#fff' : 'var(--text2)', border: `2px solid ${step >= s ? 'var(--accent)' : 'var(--border)'}` }}>{s}</div>
+          ))}
+        </div>
+
+        {step === 1 && (
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)', marginBottom: 8 }}>Conectá tu Google Drive</div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24, lineHeight: 1.6 }}>Necesitás dos carpetas en Google Drive: una donde subís los videos a publicar y otra donde se mueven después de publicados. Compartí ambas carpetas con acceso público (cualquiera con el link puede ver).</div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Carpeta "A Publicar"</div>
+              <input value={drivePublicar} onChange={e => setDrivePublicar(e.target.value)} placeholder="https://drive.google.com/drive/folders/..."
+                style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Carpeta "Publicados"</div>
+              <input value={drivePublicados} onChange={e => setDrivePublicados(e.target.value)} placeholder="https://drive.google.com/drive/folders/..."
+                style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+            </div>
+            {error && <div style={{ background: 'rgba(240,84,84,0.1)', border: '1px solid rgba(240,84,84,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>{error}</div>}
+            <button onClick={guardar} disabled={loading} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', border: 'none', background: loading ? 'var(--border)' : 'var(--accent)', color: '#fff' }}>
+              {loading ? 'Guardando...' : 'Continuar →'}
+            </button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)', marginBottom: 8 }}>Conectá tus redes sociales</div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24, lineHeight: 1.6 }}>Conectá Instagram, TikTok, YouTube y las demás redes donde querés publicar. PostIA publicará automáticamente en las redes que conectes.</div>
+            <button onClick={conectarRedes} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--accent)', color: '#fff', marginBottom: 12 }}>
+              🔗 Conectar redes →
+            </button>
+            <button onClick={onComplete} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)' }}>
+              Hacer esto después
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function RegisterPage({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [nombre, setNombre] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleRegister = async () => {
+    if (!nombre || !email || !password) { setError('Completá todos los campos'); return }
+    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    setLoading(true); setError('')
+    const { data, error: authError } = await supabase.auth.signUp({ email, password })
+    if (authError) { setError(authError.message); setLoading(false); return }
+    if (data.user) {
+      // Crear usuario en tabla usuarios
+      const username = email.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase() + Math.floor(Math.random() * 999)
+      await supabase.from('usuarios').insert({ id: data.user.id, email, plan: 'starter', activo: true, upload_post_username: username })
+      // Crear perfil en Upload Post
+      try {
+        await fetch('/api/uploadpost-crear-usuario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) })
+      } catch(e) { console.error('Error creando perfil Upload Post:', e) }
+      setSuccess(true)
+    }
+    setLoading(false)
+  }
+
+  if (success) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 40, width: 360, maxWidth: '90vw', textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+        <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8, color: 'var(--text)' }}>¡Cuenta creada!</div>
+        <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>Revisá tu email para confirmar tu cuenta y luego ingresá.</div>
+        <button onClick={onBack} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--accent)', color: '#fff' }}>Ir al login</button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 40, width: 360, maxWidth: '90vw' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <img src="/postia-logo.svg" alt="PostIA" style={{ height: 48, width: 'auto', marginBottom: 4 }} />
+          <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>Crear cuenta</div>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Nombre</div>
+          <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre"
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Email</div>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com"
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Contraseña</div>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+        </div>
+        {error && <div style={{ background: 'rgba(240,84,84,0.1)', border: '1px solid rgba(240,84,84,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>{error}</div>}
+        <button onClick={handleRegister} disabled={loading} style={{ width: '100%', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', border: 'none', background: loading ? 'var(--border)' : 'var(--accent)', color: '#fff', marginBottom: 12 }}>
+          {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+        </button>
+        <div onClick={onBack} style={{ textAlign: 'center', fontSize: 13, color: 'var(--text2)', cursor: 'pointer' }}>¿Ya tenés cuenta? <span style={{ color: 'var(--accent)' }}>Ingresar</span></div>
       </div>
     </div>
   )
@@ -110,6 +262,9 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
 
 export default function Panel() {
   const [authed, setAuthed] = useState<boolean | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [showRegister, setShowRegister] = useState(false)
+  const [onboarding, setOnboarding] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
 
   const toggleDark = () => {
@@ -232,16 +387,37 @@ export default function Panel() {
 
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session))
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => setAuthed(!!session))
+    supabase.auth.getSession().then(async ({ data }) => {
+      setAuthed(!!data.session)
+      if (data.session?.user) {
+        setCurrentUser(data.session.user)
+        // Verificar si necesita onboarding
+        const { data: usr } = await supabase.from('usuarios').select('upload_post_username').eq('id', data.session.user.id).single()
+        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', data.session.user.id).eq('parametro', 'drive_carpeta_publicar').single()
+        if (!cfg?.valor) setOnboarding(true)
+      }
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_e, session) => {
+      setAuthed(!!session)
+      if (session?.user) {
+        setCurrentUser(session.user)
+        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', session.user.id).eq('parametro', 'drive_carpeta_publicar').single()
+        if (!cfg?.valor) setOnboarding(true)
+      } else {
+        setCurrentUser(null)
+        setOnboarding(false)
+      }
+    })
     return () => listener.subscription.unsubscribe()
   }, [])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const USER_ID_FETCH = '27e3028e-086f-4166-b887-ab15851cbfc2'
+    const { data: { session } } = await supabase.auth.getSession()
+    const USER_ID_FETCH = session?.user?.id || ''
+    if (!USER_ID_FETCH) { setLoading(false); return }
     const [{ data: cont }, { data: cfg }, { data: userCfg }] = await Promise.all([
-      supabase.from('contenido').select('*').order('fecha_aprobacion', { ascending: false }),
+      supabase.from('contenido').select('*').eq('user_id', USER_ID_FETCH).order('fecha_aprobacion', { ascending: false }),
       supabase.from('config').select('*'),
       supabase.from('usuario_config').select('parametro,valor').eq('user_id', USER_ID_FETCH)
     ])
@@ -344,7 +520,7 @@ export default function Panel() {
     setPaused(!paused); showToast(newVal === 'SI' ? '⏸ Sistema pausado' : '▶ Sistema reanudado')
   }
 
-  const USER_ID = '27e3028e-086f-4166-b887-ab15851cbfc2'
+  const USER_ID = currentUser?.id || ''
   const USER_CONFIG_KEYS = ['drive_carpeta_publicar', 'drive_carpeta_publicados', 'max_videos_diarios', 'autopublicacion', 'hora_instagram', 'hora_tiktok', 'hora_threads', 'hora_youtube', 'hora_linkedin', 'hora_twitter', 'dias_reposteo', 'score_reposteo', 'intervalo_horas', 'min_views']
 
   const saveConfig = async () => {
@@ -458,7 +634,9 @@ export default function Panel() {
   }
 
   if (authed === null) return <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)' }}>Cargando...</div>
-  if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />
+  if (!authed && showRegister) return <RegisterPage onBack={() => setShowRegister(false)} />
+  if (!authed) return <LoginPage onLogin={() => setAuthed(true)} onRegister={() => setShowRegister(true)} />
+  if (authed && onboarding) return <OnboardingPage userId={currentUser?.id || ''} onComplete={() => { setOnboarding(false); fetchData() }} />
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
