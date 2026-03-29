@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     // Usar service role key para crear usuarios sin confirmación
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     // Crear en Auth
