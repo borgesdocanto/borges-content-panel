@@ -393,7 +393,7 @@ export default function Panel() {
         setCurrentUser(data.session.user)
         // Verificar si necesita onboarding
         const { data: usr } = await supabase.from('usuarios').select('upload_post_username').eq('id', data.session.user.id).single()
-        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', data.session.user.id).eq('parametro', 'drive_carpeta_publicar').single()
+        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', data.session.user.id).eq('parametro', 'drive_carpeta_publicar').maybeSingle()
         if (!cfg?.valor) setOnboarding(true)
       }
     })
@@ -401,7 +401,7 @@ export default function Panel() {
       setAuthed(!!session)
       if (session?.user) {
         setCurrentUser(session.user)
-        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', session.user.id).eq('parametro', 'drive_carpeta_publicar').single()
+        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', session.user.id).eq('parametro', 'drive_carpeta_publicar').maybeSingle()
         if (!cfg?.valor) setOnboarding(true)
       } else {
         setCurrentUser(null)
