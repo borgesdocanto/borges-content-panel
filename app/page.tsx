@@ -120,12 +120,19 @@ function OnboardingPage({ userId, onComplete }: { userId: string; onComplete: ()
     if (!drivePublicar || !drivePublicados) { setError('Completá ambas URLs de Drive'); return }
     if (!drivePublicar.includes('drive.google.com') || !drivePublicados.includes('drive.google.com')) { setError('Las URLs deben ser de Google Drive'); return }
     setLoading(true); setError('')
+    // Obtener userId desde sesión activa si el prop llega vacío
+    let uid = userId
+    if (!uid) {
+      const { data: { session } } = await supabase.auth.getSession()
+      uid = session?.user?.id || ''
+    }
+    if (!uid) { setError('Error: sesión no encontrada. Recargá la página.'); setLoading(false); return }
     try {
       const results = await Promise.all([
-        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicar', valor: drivePublicar }, { onConflict: 'user_id,parametro' }),
-        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'drive_carpeta_publicados', valor: drivePublicados }, { onConflict: 'user_id,parametro' }),
-        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'max_videos_diarios', valor: '2' }, { onConflict: 'user_id,parametro' }),
-        supabase.from('usuario_config').upsert({ user_id: userId, parametro: 'autopublicacion', valor: 'false' }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: uid, parametro: 'drive_carpeta_publicar', valor: drivePublicar }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: uid, parametro: 'drive_carpeta_publicados', valor: drivePublicados }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: uid, parametro: 'max_videos_diarios', valor: '2' }, { onConflict: 'user_id,parametro' }),
+        supabase.from('usuario_config').upsert({ user_id: uid, parametro: 'autopublicacion', valor: 'false' }, { onConflict: 'user_id,parametro' }),
       ])
       const errores = results.filter(r => r.error)
       if (errores.length > 0) {
@@ -405,16 +412,16 @@ export default function Panel() {
         setCurrentUser(data.session.user)
         // Verificar si necesita onboarding
         const { data: usr } = await supabase.from('usuarios').select('upload_post_username').eq('id', data.session.user.id).single()
-        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', data.session.user.id).eq('parametro', 'drive_carpeta_publicar').maybeSingle()
-        if (!cfg?.valor) setOnboarding(true)
+        const { data: cfgArr } = await supabase.from('usuario_config').select('valor').eq('user_id', data.session.user.id).eq('parametro', 'drive_carpeta_publicar').limit(1)
+        if (!cfgArr || cfgArr.length === 0 || !cfgArr[0]?.valor) setOnboarding(true)
       }
     })
     const { data: listener } = supabase.auth.onAuthStateChange(async (_e, session) => {
       setAuthed(!!session)
       if (session?.user) {
         setCurrentUser(session.user)
-        const { data: cfg } = await supabase.from('usuario_config').select('valor').eq('user_id', session.user.id).eq('parametro', 'drive_carpeta_publicar').maybeSingle()
-        if (!cfg?.valor) setOnboarding(true)
+        const { data: cfgArr } = await supabase.from('usuario_config').select('valor').eq('user_id', session.user.id).eq('parametro', 'drive_carpeta_publicar').limit(1)
+        if (!cfgArr || cfgArr.length === 0 || !cfgArr[0]?.valor) setOnboarding(true)
       } else {
         setCurrentUser(null)
         setOnboarding(false)
