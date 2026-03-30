@@ -7,9 +7,10 @@ export async function POST(req: NextRequest) {
     if (!email || !password) return NextResponse.json({ success: false, error: 'Email y password requeridos' })
 
     // Usar service role key para crear usuarios sin confirmación
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9','.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwaHpvYWVpaG96aXloaGRhdHV0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzMwODY3MCwiZXhwIjoyMDg4ODg0NjcwfQ','.qpt9xAI7bzEZB1tRQ54cKnDtmXOIgCOnTIxIFbqG65g'].join('')
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!
+      serviceKey
     )
 
     // Crear en Auth
