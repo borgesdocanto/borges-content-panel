@@ -9,12 +9,16 @@ export async function POST(req: NextRequest) {
     const { contenido, redes, username } = await req.json()
 
     const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}`
-    const coverUrl = `https://n8n.borges.com.ar/videos/${contenido.portada_youtube_path}`
+    
+    // URLs de portadas desde Supabase Storage (accesibles publicamente)
+    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 para IG/TT/FB/Threads
+    const coverYoutube = contenido.portada_url || ''            // 16:9 para YouTube
 
     const form = new FormData()
     form.append('user', username)
     form.append('video', videoUrl)
     form.append('async_upload', 'true')
+    form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo)
 
     // Plataformas activas
     const platformMap: Record<string, string> = {
@@ -25,36 +29,29 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
-    // INSTAGRAM — caption = titulo + descripcion + hashtags, portada via cover_url
+    // INSTAGRAM — caption completo + portada vertical 9:16
     if (redes.ig) {
-      const igCaption = [
-        contenido.ig_titulo,
-        contenido.ig_descripcion,
-        contenido.ig_hashtags
-      ].filter(Boolean).join('\n\n')
+      const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags]
+        .filter(Boolean).join('\n\n')
       form.append('instagram_title', igCaption)
-      form.append('cover_url', coverUrl)
       form.append('media_type', 'REELS')
+      if (coverVertical) form.append('cover_url', coverVertical)
     }
 
-    // TIKTOK — titulo + descripcion + hashtags (max 2200 chars)
+    // TIKTOK — caption completo + portada vertical 9:16
     if (redes.tt) {
-      const ttCaption = [
-        contenido.tt_titulo,
-        contenido.tt_descripcion,
-        contenido.tt_hashtags
-      ].filter(Boolean).join('\n\n')
+      const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags]
+        .filter(Boolean).join('\n\n')
       form.append('tiktok_title', ttCaption.slice(0, 2200))
     }
 
-    // YOUTUBE — titulo SEO requerido + descripcion + thumbnail
+    // YOUTUBE — titulo SEO + descripcion + keywords + thumbnail 16:9
     if (redes.yt) {
       form.append('youtube_title', contenido.yt_titulo || contenido.ig_titulo)
-      form.append('youtube_description', [
-        contenido.yt_descripcion,
-        contenido.yt_hashtags
-      ].filter(Boolean).join('\n\n'))
-      form.append('thumbnail_url', coverUrl)
+      const ytDesc = [contenido.yt_descripcion, contenido.yt_keywords ? `Keywords: ${contenido.yt_keywords}` : '']
+        .filter(Boolean).join('\n\n')
+      form.append('youtube_description', ytDesc)
+      if (coverYoutube) form.append('thumbnail_url', coverYoutube)
     }
 
     // LINKEDIN — titulo + descripcion como commentary
@@ -64,10 +61,12 @@ export async function POST(req: NextRequest) {
       form.append('visibility', 'PUBLIC')
     }
 
-    // FACEBOOK — titulo + descripcion
+    // FACEBOOK — titulo + descripcion + portada vertical
     if (redes.fb) {
-      form.append('facebook_title', contenido.ig_titulo)
-      form.append('facebook_description', contenido.fb_descripcion || contenido.ig_descripcion)
+      const fbCaption = [contenido.ig_titulo, contenido.fb_descripcion || contenido.ig_descripcion]
+        .filter(Boolean).join('\n\n')
+      form.append('facebook_title', fbCaption)
+      form.append('facebook_media_type', 'REELS')
     }
 
     // TWITTER/X — texto corto max 280 chars
@@ -75,13 +74,10 @@ export async function POST(req: NextRequest) {
       form.append('x_title', (contenido.tw_texto || contenido.ig_titulo).slice(0, 280))
     }
 
-    // THREADS — texto
+    // THREADS — texto completo
     if (redes.th) {
       form.append('threads_title', contenido.th_texto || contenido.ig_titulo)
     }
-
-    // Título global como fallback requerido para YouTube
-    form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo)
 
     const res = await fetch('https://api.upload-post.com/api/upload', {
       method: 'POST',
