@@ -25,8 +25,16 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
-    if (redes.ig) form.append('instagram_title', contenido.ig_descripcion || contenido.ig_titulo)
-    if (redes.tt) form.append('tiktok_title', contenido.tt_descripcion || contenido.tt_titulo)
+    if (redes.ig) {
+      // Caption completo = titulo + descripcion + hashtags
+      const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags].filter(Boolean).join('\n\n')
+      form.append('instagram_title', igCaption)
+      form.append('cover_url', thumbnailUrl) // portada del reel
+    }
+    if (redes.tt) {
+      const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags].filter(Boolean).join('\n\n')
+      form.append('tiktok_title', ttCaption)
+    }
     if (redes.yt) {
       form.append('youtube_title', contenido.yt_titulo)
       form.append('youtube_description', contenido.yt_descripcion || '')
