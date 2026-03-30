@@ -9,14 +9,14 @@ export async function POST(req: NextRequest) {
     const { contenido, redes, username } = await req.json()
 
     const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}`
-    const thumbnailUrl = `https://n8n.borges.com.ar/videos/${contenido.portada_youtube_path}`
+    const coverUrl = `https://n8n.borges.com.ar/videos/${contenido.portada_youtube_path}`
 
     const form = new FormData()
     form.append('user', username)
     form.append('video', videoUrl)
     form.append('async_upload', 'true')
-    form.append('title', contenido.ig_titulo || contenido.archivo)
 
+    // Plataformas activas
     const platformMap: Record<string, string> = {
       ig: 'instagram', tt: 'tiktok', yt: 'youtube',
       li: 'linkedin', fb: 'facebook', tw: 'x', th: 'threads'
@@ -25,31 +25,63 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
+    // INSTAGRAM — caption = titulo + descripcion + hashtags, portada via cover_url
     if (redes.ig) {
-      // Caption completo = titulo + descripcion + hashtags
-      const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags].filter(Boolean).join('\n\n')
+      const igCaption = [
+        contenido.ig_titulo,
+        contenido.ig_descripcion,
+        contenido.ig_hashtags
+      ].filter(Boolean).join('\n\n')
       form.append('instagram_title', igCaption)
-      form.append('cover_url', thumbnailUrl) // portada del reel
+      form.append('cover_url', coverUrl)
+      form.append('media_type', 'REELS')
     }
+
+    // TIKTOK — titulo + descripcion + hashtags (max 2200 chars)
     if (redes.tt) {
-      const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags].filter(Boolean).join('\n\n')
-      form.append('tiktok_title', ttCaption)
+      const ttCaption = [
+        contenido.tt_titulo,
+        contenido.tt_descripcion,
+        contenido.tt_hashtags
+      ].filter(Boolean).join('\n\n')
+      form.append('tiktok_title', ttCaption.slice(0, 2200))
     }
+
+    // YOUTUBE — titulo SEO requerido + descripcion + thumbnail
     if (redes.yt) {
-      form.append('youtube_title', contenido.yt_titulo)
-      form.append('youtube_description', contenido.yt_descripcion || '')
-      form.append('thumbnail_url', thumbnailUrl)
+      form.append('youtube_title', contenido.yt_titulo || contenido.ig_titulo)
+      form.append('youtube_description', [
+        contenido.yt_descripcion,
+        contenido.yt_hashtags
+      ].filter(Boolean).join('\n\n'))
+      form.append('thumbnail_url', coverUrl)
     }
+
+    // LINKEDIN — titulo + descripcion como commentary
     if (redes.li) {
-      form.append('linkedin_title', contenido.li_titulo)
-      form.append('linkedin_description', contenido.li_descripcion || '')
+      form.append('linkedin_title', contenido.li_titulo || contenido.ig_titulo)
+      form.append('linkedin_description', contenido.li_descripcion || contenido.ig_descripcion)
+      form.append('visibility', 'PUBLIC')
     }
+
+    // FACEBOOK — titulo + descripcion
     if (redes.fb) {
       form.append('facebook_title', contenido.ig_titulo)
-      form.append('facebook_description', contenido.fb_descripcion || '')
+      form.append('facebook_description', contenido.fb_descripcion || contenido.ig_descripcion)
     }
-    if (redes.tw) form.append('x_title', contenido.tw_texto)
-    if (redes.th) form.append('threads_title', contenido.th_texto)
+
+    // TWITTER/X — texto corto max 280 chars
+    if (redes.tw) {
+      form.append('x_title', (contenido.tw_texto || contenido.ig_titulo).slice(0, 280))
+    }
+
+    // THREADS — texto
+    if (redes.th) {
+      form.append('threads_title', contenido.th_texto || contenido.ig_titulo)
+    }
+
+    // Título global como fallback requerido para YouTube
+    form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo)
 
     const res = await fetch('https://api.upload-post.com/api/upload', {
       method: 'POST',
@@ -59,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json()
 
-    // Marcar redes publicadas en Supabase
+    // Marcar redes como publicadas en Supabase
     if (data.success || data.request_id) {
       const updates: Record<string, any> = {}
       const results = data.results || {}
