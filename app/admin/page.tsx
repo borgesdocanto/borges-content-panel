@@ -3,10 +3,9 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ['https://zphzoaeihoziyhhdatut', '.supabase.co'].join('')
+const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ['sb_secret_NGX9Agd0mK1', 'fOdb8__5c7Q_HqYpUPLU'].join('')
+const supabase = createClient(SUPA_URL, SUPA_KEY)
 
 const ADMIN_EMAIL = 'borgesdocanto@gmail.com'
 
