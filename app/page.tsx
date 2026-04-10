@@ -516,7 +516,9 @@ export default function Panel() {
             try {
               const sr = await fetch(`/api/upload-status?request_id=${result.request_id}`)
               const sd = await sr.json()
-              if (sd.results) {
+              console.log('Poll status:', sd.status, JSON.stringify(sd.results))
+              const stillProcessing = ['pending','queued','processing','in_progress'].includes(sd.status)
+              if (sd.results && !stillProcessing) {
                 const updates: Record<string, boolean> = {}
                 const r = sd.results
                 if (redes.ig && r.instagram?.success) updates.ig_publicado = true
@@ -531,13 +533,17 @@ export default function Panel() {
                   await fetchData()
                   showToast('✅ Publicado — logos actualizados')
                   return
+                } else {
+                  showToast('⚠️ Sin éxito en redes — revisá Upload Post dashboard')
+                  await fetchData()
+                  return
                 }
               }
-              if (intentos < 8) setTimeout(poll, 5000)
+              if (stillProcessing || intentos < 15) setTimeout(poll, 8000)
               else { await fetchData(); showToast('⏳ Procesando en segundo plano') }
-            } catch(e) { if (intentos < 8) setTimeout(poll, 5000) }
+            } catch(e) { if (intentos < 15) setTimeout(poll, 8000) }
           }
-          setTimeout(poll, 5000)
+          setTimeout(poll, 8000)
         } else if (result.success) {
           showToast('✅ Publicado en redes correctamente')
           await fetchData()
@@ -1468,7 +1474,9 @@ export default function Panel() {
                     try {
                       const sr = await fetch(`/api/upload-status?request_id=${result.request_id}`)
                       const sd = await sr.json()
-                      if (sd.results) {
+                      console.log('Poll2 status:', sd.status, JSON.stringify(sd.results))
+                      const stillProcessing2 = ['pending','queued','processing','in_progress'].includes(sd.status)
+                      if (sd.results && !stillProcessing2) {
                         const updates: Record<string, boolean> = {}
                         const r2 = sd.results
                         if (redesObj.ig && r2.instagram?.success) updates.ig_publicado = true
@@ -1483,13 +1491,17 @@ export default function Panel() {
                           await fetchData()
                           showToast('✅ Publicado — logos actualizados')
                           return
+                        } else {
+                          showToast('⚠️ Sin éxito en redes — revisá Upload Post dashboard')
+                          await fetchData()
+                          return
                         }
                       }
-                      if (intentos2 < 8) setTimeout(poll2, 5000)
+                      if (stillProcessing2 || intentos2 < 15) setTimeout(poll2, 8000)
                       else { await fetchData(); showToast('⏳ Procesando en segundo plano') }
-                    } catch(e) { if (intentos2 < 8) setTimeout(poll2, 5000) }
+                    } catch(e) { if (intentos2 < 15) setTimeout(poll2, 8000) }
                   }
-                  setTimeout(poll2, 5000)
+                  setTimeout(poll2, 8000)
                 } else if (result.success) {
                   showToast('✅ Publicado correctamente')
                   await fetchData()

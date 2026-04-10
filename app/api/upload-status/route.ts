@@ -10,6 +10,18 @@ export async function GET(req: NextRequest) {
       headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` }
     })
     const data = await res.json()
+    console.log('=== UPLOAD STATUS RESPONSE ===', JSON.stringify(data))
+    
+    // Normalizar results: la API devuelve array [{platform, success, ...}]
+    // Lo convertimos a objeto {instagram: {success}, tiktok: {success}, ...} para compatibilidad
+    if (data.results && Array.isArray(data.results)) {
+      const normalized: Record<string, any> = {}
+      for (const r of data.results) {
+        if (r.platform) normalized[r.platform] = { success: r.success, url: r.url, message: r.message }
+      }
+      data.results = normalized
+    }
+    
     return NextResponse.json(data)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
