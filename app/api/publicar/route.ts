@@ -29,15 +29,16 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
-    // INSTAGRAM — caption completo (max 2200) + portada vertical 9:16
-    // cover_url: URL pública de Supabase Storage (debe ser accesible sin auth)
+    // INSTAGRAM — caption completo (max 2200)
+    // cover_url removido: Supabase Storage sirve PNG pero Instagram requiere JPEG directo
+    // Usamos thumb_offset para seleccionar frame del video como portada
     if (redes.ig) {
       const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('instagram_title', igCaption)
       form.append('media_type', 'REELS')
       form.append('share_to_feed', 'true')
-      if (coverVertical) form.append('cover_url', coverVertical)
+      form.append('thumb_offset', '1000')  // frame en ms — Instagram elige portada del video
     }
 
     // TIKTOK — caption (max 2200) + cover_timestamp (TikTok no acepta imagen externa como portada)
