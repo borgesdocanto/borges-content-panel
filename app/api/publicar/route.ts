@@ -8,15 +8,16 @@ export async function POST(req: NextRequest) {
 
     const { contenido, redes, username } = await req.json()
 
-    const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}`
-    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 IG/TT/FB/Threads
-    const coverYoutube = contenido.portada_url || ''            // 16:9 YouTube
+    // Google Drive URL directa (sin redirección) para compatibilidad con todas las plataformas
+    const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}&confirm=t`
+    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 IG/FB/Threads (Supabase Storage)
+    const coverYoutube = contenido.portada_url || ''            // 16:9 YouTube (Supabase Storage)
 
     const form = new FormData()
     form.append('user', username)
     form.append('video', videoUrl)
     form.append('async_upload', 'true')
-    // title global requerido para YouTube
+    // title global — requerido para YouTube
     form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo || '')
 
     // Plataformas activas
@@ -29,19 +30,23 @@ export async function POST(req: NextRequest) {
     }
 
     // INSTAGRAM — caption completo (max 2200) + portada vertical 9:16
+    // cover_url: URL pública de Supabase Storage (debe ser accesible sin auth)
     if (redes.ig) {
       const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('instagram_title', igCaption)
       form.append('media_type', 'REELS')
+      form.append('share_to_feed', 'true')
       if (coverVertical) form.append('cover_url', coverVertical)
     }
 
-    // TIKTOK — caption completo (max 2200 para video)
+    // TIKTOK — caption (max 2200) + cover_timestamp (TikTok no acepta imagen externa como portada)
+    // La portada de TikTok es siempre un frame del video, se define con cover_timestamp en ms
     if (redes.tt) {
       const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('tiktok_title', ttCaption)
+      form.append('cover_timestamp', '1000')  // frame en ms 1 segundo — ajustar según el video
     }
 
     // YOUTUBE — titulo SEO + descripcion completa + thumbnail 16:9
