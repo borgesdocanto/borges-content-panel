@@ -518,7 +518,8 @@ export default function Panel() {
               const sd = await sr.json()
               console.log('Poll status:', sd.status, JSON.stringify(sd.results))
               const stillProcessing = ['pending','queued','processing','in_progress'].includes(sd.status)
-              if (sd.results && !stillProcessing) {
+              // Procesar results aunque esté processing — puede tener resultados parciales ya completados
+              if (sd.results && (sd.status === 'completed' || sd.status === 'failed' || !stillProcessing)) {
                 const updates: Record<string, boolean> = {}
                 const r = sd.results
                 if (redes.ig && r.instagram?.success) updates.ig_publicado = true
@@ -534,7 +535,9 @@ export default function Panel() {
                   showToast('✅ Publicado — logos actualizados')
                   return
                 } else {
-                  showToast('⚠️ Sin éxito en redes — revisá Upload Post dashboard')
+                  // Mostrar errores por plataforma
+                  const errores = Object.entries(r).filter(([,v]: any) => !v.success && v.message).map(([k,v]: any) => `${k}: ${v.message||v.error}`).join(' | ')
+                  showToast('⚠️ ' + (errores || 'Sin éxito en redes — revisá Upload Post dashboard'))
                   await fetchData()
                   return
                 }
@@ -1476,7 +1479,7 @@ export default function Panel() {
                       const sd = await sr.json()
                       console.log('Poll2 status:', sd.status, JSON.stringify(sd.results))
                       const stillProcessing2 = ['pending','queued','processing','in_progress'].includes(sd.status)
-                      if (sd.results && !stillProcessing2) {
+                      if (sd.results && (sd.status === 'completed' || sd.status === 'failed' || !stillProcessing2)) {
                         const updates: Record<string, boolean> = {}
                         const r2 = sd.results
                         if (redesObj.ig && r2.instagram?.success) updates.ig_publicado = true
@@ -1492,7 +1495,8 @@ export default function Panel() {
                           showToast('✅ Publicado — logos actualizados')
                           return
                         } else {
-                          showToast('⚠️ Sin éxito en redes — revisá Upload Post dashboard')
+                          const errores2 = Object.entries(r2).filter(([,v]: any) => !v.success && v.message).map(([k,v]: any) => `${k}: ${v.message||v.error}`).join(' | ')
+                          showToast('⚠️ ' + (errores2 || 'Sin éxito en redes — revisá Upload Post dashboard'))
                           await fetchData()
                           return
                         }
