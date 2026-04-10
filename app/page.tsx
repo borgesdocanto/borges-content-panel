@@ -1411,41 +1411,111 @@ export default function Panel() {
       {/* MODAL GESTIONAR REDES */}
       {deleteModal && (
         <div onClick={() => setDeleteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 400, maxWidth: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>Eliminar post</div>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 440, maxWidth: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>Gestionar publicación</div>
               <span onClick={() => setDeleteModal(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.5 }}>
-              Vas a eliminar <strong style={{ color: 'var(--text)' }}>{deleteModal.nombre}</strong> de la app y de Supabase.
-            </div>
-            <div style={{ fontSize: 12, color: '#ef4444', background: '#ef444415', border: '1px solid #ef444433', borderRadius: 8, padding: '10px 14px', marginBottom: 24 }}>
-              ⚠️ Esta acción no se puede deshacer. El video sigue publicado en las redes sociales — solo se elimina el registro en la app.
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>{deleteModal.nombre}</div>
+
+            {/* Sección republicar */}
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Republicar en redes</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
               {[
-                { r: 'instagram', pub: deleteModal.ig_publicado },
-                { r: 'tiktok',    pub: deleteModal.tt_publicado },
-                { r: 'youtube',   pub: deleteModal.yt_publicado },
-                { r: 'linkedin',  pub: deleteModal.li_publicado },
-                { r: 'facebook',  pub: deleteModal.fb_publicado },
-                { r: 'twitter',   pub: deleteModal.tw_publicado },
-                { r: 'threads',   pub: deleteModal.th_publicado },
-              ].filter(({ pub }) => pub).map(({ r }) => (
-                <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: RED_META[r]?.color }}>
-                  <SvgIcon red={r} size={14} />
-                  <span>Publicado en {RED_META[r]?.label}</span>
+                { r: 'instagram', pub: deleteModal.ig_publicado, key: 'ig' },
+                { r: 'tiktok',    pub: deleteModal.tt_publicado, key: 'tt' },
+                { r: 'youtube',   pub: deleteModal.yt_publicado, key: 'yt' },
+                { r: 'linkedin',  pub: deleteModal.li_publicado, key: 'li' },
+                { r: 'facebook',  pub: deleteModal.fb_publicado, key: 'fb' },
+                { r: 'twitter',   pub: deleteModal.tw_publicado, key: 'tw' },
+                { r: 'threads',   pub: deleteModal.th_publicado, key: 'th' },
+              ].map(({ r, pub }) => (
+                <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: pub ? `${RED_META[r]?.color}10` : 'var(--bg3)', border: `1px solid ${pub ? RED_META[r]?.color + '33' : 'var(--border)'}` }}>
+                  <SvgIcon red={r} size={16} redOverride={pub ? RED_META[r]?.color : 'var(--text2)'} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: pub ? RED_META[r]?.color : 'var(--text)' }}>{RED_META[r]?.label}</span>
+                  {pub && <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, marginRight: 8 }}>✓ Publicado</span>}
+                  <input type="checkbox" checked={deleteRedes.includes(r)}
+                    onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))}
+                    style={{ width: 15, height: 15, cursor: 'pointer', accentColor: RED_META[r]?.color }} />
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <Btn onClick={() => setDeleteModal(null)} style={{ flex: 1 }}>Cancelar</Btn>
-              <button
-                onClick={confirmarEliminar}
-                style={{ flex: 2, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none', background: '#ef4444', color: '#fff' }}
-              >
-                🗑 Eliminar de la app
-              </button>
+            <button
+              disabled={deleteRedes.length === 0}
+              onClick={async () => {
+                if (!deleteModal) return
+                const { data: cont } = await supabase.from('contenido').select('*').eq('id', deleteModal.id).single()
+                if (!cont) return
+                setDeleteModal(null)
+                showToast('📤 Publicando en redes seleccionadas...')
+                const redesObj: Record<string, boolean> = {}
+                deleteRedes.forEach(r => {
+                  const keyMap: Record<string, string> = { instagram: 'ig', tiktok: 'tt', youtube: 'yt', linkedin: 'li', facebook: 'fb', twitter: 'tw', threads: 'th' }
+                  if (keyMap[r]) redesObj[keyMap[r]] = true
+                })
+                const res = await fetch('/api/publicar', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contenido: cont, redes: redesObj, username: uploadPostUsername })
+                })
+                const result = await res.json()
+                if (result.request_id) {
+                  showToast('📡 Procesando... actualizando estado en segundos')
+                  let intentos2 = 0
+                  const poll2 = async () => {
+                    intentos2++
+                    try {
+                      const sr = await fetch(`/api/upload-status?request_id=${result.request_id}`)
+                      const sd = await sr.json()
+                      if (sd.results) {
+                        const updates: Record<string, boolean> = {}
+                        const r2 = sd.results
+                        if (redesObj.ig && r2.instagram?.success) updates.ig_publicado = true
+                        if (redesObj.tt && r2.tiktok?.success) updates.tt_publicado = true
+                        if (redesObj.yt && r2.youtube?.success) updates.yt_publicado = true
+                        if (redesObj.li && r2.linkedin?.success) updates.li_publicado = true
+                        if (redesObj.fb && r2.facebook?.success) updates.fb_publicado = true
+                        if (redesObj.tw && r2.x?.success) updates.tw_publicado = true
+                        if (redesObj.th && r2.threads?.success) updates.th_publicado = true
+                        if (Object.keys(updates).length > 0) {
+                          await supabase.from('contenido').update(updates).eq('id', cont.id)
+                          await fetchData()
+                          showToast('✅ Publicado — logos actualizados')
+                          return
+                        }
+                      }
+                      if (intentos2 < 8) setTimeout(poll2, 5000)
+                      else { await fetchData(); showToast('⏳ Procesando en segundo plano') }
+                    } catch(e) { if (intentos2 < 8) setTimeout(poll2, 5000) }
+                  }
+                  setTimeout(poll2, 5000)
+                } else if (result.success) {
+                  showToast('✅ Publicado correctamente')
+                  await fetchData()
+                } else {
+                  showToast('⚠️ Error: ' + (result.message || result.error || 'Error desconocido'))
+                  await fetchData()
+                }
+              }}
+              style={{ width: '100%', padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: deleteRedes.length === 0 ? 'default' : 'pointer', border: 'none', background: deleteRedes.length === 0 ? 'var(--border)' : 'var(--accent)', color: '#fff', opacity: deleteRedes.length === 0 ? 0.5 : 1, marginBottom: 20 }}
+            >
+              📤 Republicar seleccionadas →
+            </button>
+
+            {/* Sección eliminar */}
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.5 }}>
+                ⚠️ Eliminar el registro de la app. El video <strong>sigue publicado</strong> en las redes sociales.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Btn onClick={() => setDeleteModal(null)} style={{ flex: 1 }}>Cancelar</Btn>
+                <button
+                  onClick={confirmarEliminar}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444' }}
+                >
+                  🗑 Eliminar de la app
+                </button>
+              </div>
             </div>
           </div>
         </div>
