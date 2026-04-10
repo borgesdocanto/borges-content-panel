@@ -89,6 +89,14 @@ export async function POST(req: NextRequest) {
     })
 
     const data = await res.json()
+    // Log completo para debug
+    console.log('=== UPLOAD POST RESPONSE ===')
+    console.log('HTTP status:', res.status)
+    console.log('Body:', JSON.stringify(data, null, 2))
+    console.log('=== FORM FIELDS ===')
+    for (const [k, v] of form.entries()) {
+      console.log(`  ${k}: ${typeof v === 'string' ? v.slice(0, 100) : '[file]'}`)
+    }
 
     // Guardar request_id pero NO marcar como publicado aún — esperamos confirmación via status
     if (data.request_id && SUPABASE_URL && SUPABASE_KEY) {

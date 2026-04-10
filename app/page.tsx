@@ -506,8 +506,9 @@ export default function Panel() {
           body: JSON.stringify({ contenido: cont, redes, username: uploadPostUsername })
         })
         const result = await res.json()
+        console.log('Upload Post result:', JSON.stringify(result))
         if (result.request_id) {
-          showToast('📡 Procesando... actualizando estado en segundos')
+          showToast('📡 request_id: ' + result.request_id.slice(0, 12) + '...')
           // Polling: esperar que Upload Post procese y actualizar logos
           let intentos = 0
           const poll = async () => {
