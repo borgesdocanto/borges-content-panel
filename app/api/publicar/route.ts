@@ -9,16 +9,15 @@ export async function POST(req: NextRequest) {
     const { contenido, redes, username } = await req.json()
 
     const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}`
-    
-    // URLs de portadas desde Supabase Storage (accesibles publicamente)
-    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 para IG/TT/FB/Threads
-    const coverYoutube = contenido.portada_url || ''            // 16:9 para YouTube
+    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 IG/TT/FB/Threads
+    const coverYoutube = contenido.portada_url || ''            // 16:9 YouTube
 
     const form = new FormData()
     form.append('user', username)
     form.append('video', videoUrl)
     form.append('async_upload', 'true')
-    form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo)
+    // title global requerido para YouTube
+    form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo || '')
 
     // Plataformas activas
     const platformMap: Record<string, string> = {
@@ -29,54 +28,53 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
-    // INSTAGRAM — caption completo + portada vertical 9:16
+    // INSTAGRAM — caption completo (max 2200) + portada vertical 9:16
     if (redes.ig) {
       const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags]
-        .filter(Boolean).join('\n\n')
+        .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('instagram_title', igCaption)
       form.append('media_type', 'REELS')
       if (coverVertical) form.append('cover_url', coverVertical)
     }
 
-    // TIKTOK — caption completo + portada vertical 9:16
+    // TIKTOK — caption completo (max 2200 para video)
     if (redes.tt) {
       const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags]
-        .filter(Boolean).join('\n\n')
-      form.append('tiktok_title', ttCaption.slice(0, 2200))
+        .filter(Boolean).join('\n\n').slice(0, 2200)
+      form.append('tiktok_title', ttCaption)
     }
 
-    // YOUTUBE — titulo SEO + descripcion + keywords + thumbnail 16:9
+    // YOUTUBE — titulo SEO + descripcion completa + thumbnail 16:9
     if (redes.yt) {
-      form.append('youtube_title', contenido.yt_titulo || contenido.ig_titulo)
-      const ytDesc = [contenido.yt_descripcion, contenido.yt_keywords ? `Keywords: ${contenido.yt_keywords}` : '']
-        .filter(Boolean).join('\n\n')
-      form.append('youtube_description', ytDesc)
+      form.append('youtube_title', (contenido.yt_titulo || contenido.ig_titulo || '').slice(0, 100))
+      const ytDesc = [contenido.yt_descripcion, contenido.yt_keywords ? `\n\nKeywords: ${contenido.yt_keywords}` : '']
+        .filter(Boolean).join('')
+      form.append('youtube_description', ytDesc.slice(0, 5000))
       if (coverYoutube) form.append('thumbnail_url', coverYoutube)
     }
 
-    // LINKEDIN — titulo + descripcion como commentary
+    // LINKEDIN — titulo + descripcion como commentary (max 3000)
     if (redes.li) {
-      form.append('linkedin_title', contenido.li_titulo || contenido.ig_titulo)
-      form.append('linkedin_description', contenido.li_descripcion || contenido.ig_descripcion)
+      form.append('linkedin_title', (contenido.li_titulo || contenido.ig_titulo || '').slice(0, 200))
+      form.append('linkedin_description', (contenido.li_descripcion || contenido.ig_descripcion || '').slice(0, 3000))
       form.append('visibility', 'PUBLIC')
     }
 
-    // FACEBOOK — titulo + descripcion + portada vertical
+    // FACEBOOK — titulo corto (max 255) + descripcion separada
     if (redes.fb) {
-      const fbCaption = [contenido.ig_titulo, contenido.fb_descripcion || contenido.ig_descripcion]
-        .filter(Boolean).join('\n\n')
-      form.append('facebook_title', fbCaption)
+      form.append('facebook_title', (contenido.ig_titulo || '').slice(0, 255))
+      form.append('facebook_description', (contenido.fb_descripcion || contenido.ig_descripcion || '').slice(0, 2000))
       form.append('facebook_media_type', 'REELS')
     }
 
-    // TWITTER/X — texto corto max 280 chars
+    // TWITTER/X — texto max 280 chars
     if (redes.tw) {
-      form.append('x_title', (contenido.tw_texto || contenido.ig_titulo).slice(0, 280))
+      form.append('x_title', (contenido.tw_texto || contenido.ig_titulo || '').slice(0, 280))
     }
 
     // THREADS — texto completo
     if (redes.th) {
-      form.append('threads_title', contenido.th_texto || contenido.ig_titulo)
+      form.append('threads_title', (contenido.th_texto || contenido.ig_titulo || '').slice(0, 500))
     }
 
     const res = await fetch('https://api.upload-post.com/api/upload', {
@@ -87,21 +85,33 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json()
 
-    // Marcar redes como publicadas en Supabase
-    if (data.success || data.request_id) {
+    // Guardar request_id pero NO marcar como publicado aún — esperamos confirmación via status
+    if (data.request_id && SUPABASE_URL && SUPABASE_KEY) {
+      await fetch(`${SUPABASE_URL}/rest/v1/contenido?id=eq.${contenido.id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ upload_post_request_id: data.request_id })
+      })
+    }
+
+    // Si es sincrónico y ya tiene resultados, marcar publicado
+    if (data.results) {
       const updates: Record<string, any> = {}
-      const results = data.results || {}
+      const results = data.results
+      if (redes.ig && results.instagram?.success) { updates.ig_publicado = true; if (results.instagram?.url) updates.ig_post_id = results.instagram.url }
+      if (redes.tt && results.tiktok?.success) { updates.tt_publicado = true; if (results.tiktok?.url) updates.tt_post_id = results.tiktok.url }
+      if (redes.yt && results.youtube?.success) { updates.yt_publicado = true; if (results.youtube?.url) updates.yt_post_id = results.youtube.url }
+      if (redes.li && results.linkedin?.success) { updates.li_publicado = true; if (results.linkedin?.url) updates.li_post_id = results.linkedin.url }
+      if (redes.fb && results.facebook?.success) { updates.fb_publicado = true; if (results.facebook?.url) updates.fb_post_id = results.facebook.url }
+      if (redes.tw && results.x?.success) { updates.tw_publicado = true; if (results.x?.url) updates.tw_post_id = results.x.url }
+      if (redes.th && results.threads?.success) { updates.th_publicado = true; if (results.threads?.url) updates.th_post_id = results.threads.url }
 
-      if (redes.ig) { updates.ig_publicado = true; if (results.instagram?.url) updates.ig_post_id = results.instagram.url }
-      if (redes.tt) { updates.tt_publicado = true; if (results.tiktok?.url) updates.tt_post_id = results.tiktok.url }
-      if (redes.yt) { updates.yt_publicado = true; if (results.youtube?.url) updates.yt_post_id = results.youtube.url }
-      if (redes.li) { updates.li_publicado = true; if (results.linkedin?.url) updates.li_post_id = results.linkedin.url }
-      if (redes.fb) { updates.fb_publicado = true; if (results.facebook?.url) updates.fb_post_id = results.facebook.url }
-      if (redes.tw) { updates.tw_publicado = true; if (results.x?.url) updates.tw_post_id = results.x.url }
-      if (redes.th) { updates.th_publicado = true; if (results.threads?.url) updates.th_post_id = results.threads.url }
-      if (data.request_id) updates.upload_post_request_id = data.request_id
-
-      if (Object.keys(updates).length > 0) {
+      if (Object.keys(updates).length > 0 && SUPABASE_URL && SUPABASE_KEY) {
         await fetch(`${SUPABASE_URL}/rest/v1/contenido?id=eq.${contenido.id}`, {
           method: 'PATCH',
           headers: {

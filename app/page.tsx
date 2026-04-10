@@ -647,16 +647,33 @@ export default function Panel() {
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
             <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
+            {c.upload_post_request_id && (
+              <Btn variant="ghost" onClick={async () => {
+                const res = await fetch(`/api/upload-status?request_id=${c.upload_post_request_id}`)
+                const data = await res.json()
+                if (data.results) {
+                  const updates: Record<string, any> = {}
+                  const r = data.results
+                  if (r.instagram?.success) { updates.ig_publicado = true; if (r.instagram.url) updates.ig_post_id = r.instagram.url }
+                  if (r.tiktok?.success) { updates.tt_publicado = true; if (r.tiktok.url) updates.tt_post_id = r.tiktok.url }
+                  if (r.youtube?.success) { updates.yt_publicado = true; if (r.youtube.url) updates.yt_post_id = r.youtube.url }
+                  if (r.linkedin?.success) { updates.li_publicado = true; if (r.linkedin.url) updates.li_post_id = r.linkedin.url }
+                  if (r.facebook?.success) { updates.fb_publicado = true; if (r.facebook.url) updates.fb_post_id = r.facebook.url }
+                  if (r.x?.success) { updates.tw_publicado = true; if (r.x.url) updates.tw_post_id = r.x.url }
+                  if (r.threads?.success) { updates.th_publicado = true; if (r.threads.url) updates.th_post_id = r.threads.url }
+                  if (Object.keys(updates).length > 0) {
+                    await supabase.from('contenido').update(updates).eq('id', c.id)
+                    await fetchData()
+                    showToast('✅ Estado actualizado')
+                  } else {
+                    showToast(`Estado: ${data.status || 'procesando...'}`)
+                  }
+                } else {
+                  showToast(`Estado Upload Post: ${data.status || 'sin datos'}`)
+                }
+              }} style={{ padding: '6px 10px' }} title="Verificar estado de publicación">🔄</Btn>
+            )}
             <Btn variant="ghost" onClick={() => {
-              const publicadas = [
-                c.ig_publicado && 'instagram',
-                c.tt_publicado && 'tiktok',
-                c.yt_publicado && 'youtube',
-                c.li_publicado && 'linkedin',
-                c.fb_publicado && 'facebook',
-                c.tw_publicado && 'twitter',
-                c.th_publicado && 'threads',
-              ].filter(Boolean) as string[]
               setDeleteRedes([])
               setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo, ig_publicado: c.ig_publicado, tt_publicado: c.tt_publicado, yt_publicado: c.yt_publicado, li_publicado: c.li_publicado, fb_publicado: c.fb_publicado, tw_publicado: c.tw_publicado, th_publicado: c.th_publicado })
             }} style={{ padding: '6px 10px' }}>📡</Btn>
