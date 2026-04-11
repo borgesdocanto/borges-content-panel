@@ -105,18 +105,26 @@ export async function POST(req: NextRequest) {
     }
 
     // LINKEDIN — llamada separada a upload_photos con portada vertical
+    // Descargamos la imagen de Supabase Storage y la enviamos como blob
     let linkedinPhotoRequestId: string | null = null
     if (redes.li && contenido.portada_url_vertical) {
       try {
+        // Descargar imagen desde Supabase Storage
+        const imgRes = await fetch(contenido.portada_url_vertical)
+        if (!imgRes.ok) throw new Error(`No se pudo descargar portada: HTTP ${imgRes.status}`)
+        const imgBlob = await imgRes.blob()
+        const imgFile = new File([imgBlob], 'portada.jpg', { type: 'image/jpeg' })
+
         const liForm = new FormData()
         liForm.append('user', username)
         liForm.append('platform[]', 'linkedin')
-        liForm.append('photos[]', contenido.portada_url_vertical)
+        liForm.append('photos[]', imgFile, 'portada.jpg')
         liForm.append('async_upload', 'true')
         const liTitulo = contenido.li_titulo || contenido.ig_titulo || ''
         const liDesc = contenido.li_descripcion || contenido.ig_descripcion || ''
         liForm.append('linkedin_title', [liTitulo, liDesc].filter(Boolean).join('\n\n').slice(0, 3000))
         liForm.append('visibility', 'PUBLIC')
+
         const liRes = await fetch('https://api.upload-post.com/api/upload_photos', {
           method: 'POST',
           headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
