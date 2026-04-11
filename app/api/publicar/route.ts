@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
     // LINKEDIN — llamada separada a upload_photos con portada vertical
     // Descargamos la imagen de Supabase Storage y la enviamos como blob
     let linkedinPhotoRequestId: string | null = null
+    let linkedinError: string | null = null
     if (redes.li && contenido.portada_url_vertical) {
       try {
         // Descargar imagen desde Supabase Storage
@@ -133,8 +134,12 @@ export async function POST(req: NextRequest) {
         const liData = await liRes.json()
         console.log('=== LINKEDIN PHOTO RESPONSE ===', JSON.stringify(liData))
         if (liData.request_id) linkedinPhotoRequestId = liData.request_id
+        if (!liData.success && !liData.request_id) {
+          linkedinError = liData.message || liData.error || JSON.stringify(liData)
+        }
       } catch(e: any) {
         console.error('Error publicando foto LinkedIn:', e.message)
+        linkedinError = e.message
       }
     }
 
@@ -191,7 +196,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ ...data, linkedin_error: linkedinError, linkedin_request_id: linkedinPhotoRequestId })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

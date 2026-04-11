@@ -511,6 +511,10 @@ export default function Panel() {
         })
         const result = await res.json()
         console.log('Upload Post result:', JSON.stringify(result))
+        // Mostrar error de LinkedIn inmediatamente si falló
+        if (result.linkedin_error) {
+          showToast('⚠️ LinkedIn: ' + result.linkedin_error)
+        }
         if (result.request_id) {
           showToast('📡 request_id: ' + result.request_id.slice(0, 12) + '...')
           // Polling: esperar que Upload Post procese y actualizar logos
@@ -1473,6 +1477,7 @@ export default function Panel() {
                   body: JSON.stringify({ contenido: cont, redes: redesObj, username: uploadPostUsername })
                 })
                 const result = await res.json()
+                if (result.linkedin_error) showToast('⚠️ LinkedIn: ' + result.linkedin_error)
                 if (result.request_id) {
                   showToast('📡 Procesando... actualizando estado en segundos')
                   let intentos2 = 0
