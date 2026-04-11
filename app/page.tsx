@@ -512,9 +512,7 @@ export default function Panel() {
         const result = await res.json()
         console.log('Upload Post result:', JSON.stringify(result))
         // Mostrar error de LinkedIn inmediatamente si falló
-        if (result.linkedin_error) {
-          showToast('⚠️ LinkedIn: ' + result.linkedin_error)
-        }
+        const liError = result.linkedin_error || null
         if (result.request_id) {
           showToast('📡 request_id: ' + result.request_id.slice(0, 12) + '...')
           // Polling: esperar que Upload Post procese y actualizar logos
@@ -540,7 +538,7 @@ export default function Panel() {
                 if (Object.keys(updates).length > 0) {
                   await supabase.from('contenido').update(updates).eq('id', id)
                   await fetchData()
-                  showToast('✅ Publicado — logos actualizados')
+                  showToast(liError ? `⚠️ LinkedIn: ${liError}` : '✅ Publicado — logos actualizados')
                   return
                 } else {
                   // Mostrar errores por plataforma
@@ -1477,8 +1475,10 @@ export default function Panel() {
                   body: JSON.stringify({ contenido: cont, redes: redesObj, username: uploadPostUsername })
                 })
                 const result = await res.json()
-                if (result.linkedin_error) showToast('⚠️ LinkedIn: ' + result.linkedin_error)
-                if (result.request_id) {
+                const liError2 = result.linkedin_error || null
+                if (!result.request_id && liError2) {
+                  showToast('⚠️ LinkedIn: ' + liError2)
+                } else if (result.request_id) {
                   showToast('📡 Procesando... actualizando estado en segundos')
                   let intentos2 = 0
                   const poll2 = async () => {

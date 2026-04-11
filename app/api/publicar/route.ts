@@ -126,6 +126,10 @@ export async function POST(req: NextRequest) {
         liForm.append('linkedin_title', [liTitulo, liDesc].filter(Boolean).join('\n\n').slice(0, 3000))
         liForm.append('visibility', 'PUBLIC')
 
+        console.log('=== LINKEDIN FORM FIELDS ===')
+        for (const [k, v] of liForm.entries()) {
+          console.log(`  ${k}: ${typeof v === 'string' ? v.slice(0, 200) : `[File: ${(v as File).name} ${(v as File).size}b ${(v as File).type}]`}`)
+        }
         const liRes = await fetch('https://api.upload-post.com/api/upload_photos', {
           method: 'POST',
           headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
