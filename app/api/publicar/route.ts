@@ -8,16 +8,14 @@ export async function POST(req: NextRequest) {
 
     const { contenido, redes, username } = await req.json()
 
-    // Google Drive URL directa (sin redirección) para compatibilidad con todas las plataformas
     const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}&confirm=t`
-    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 IG/FB/Threads (Supabase Storage)
-    const coverYoutube = contenido.portada_url || ''            // 16:9 YouTube (Supabase Storage)
+    const coverYoutube = contenido.portada_url || ''  // 16:9 YouTube JPEG
 
     const form = new FormData()
     form.append('user', username)
     form.append('video', videoUrl)
     form.append('async_upload', 'true')
-    // title global — requerido para YouTube
+    // title global — fallback para plataformas sin título específico
     form.append('title', contenido.yt_titulo || contenido.ig_titulo || contenido.archivo || '')
 
     // Plataformas activas
@@ -29,58 +27,90 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
-    // INSTAGRAM — caption completo (max 2200)
-    // cover_url removido: Supabase Storage sirve PNG pero Instagram requiere JPEG directo
-    // Usamos thumb_offset para seleccionar frame del video como portada
+    // INSTAGRAM — caption = titulo + descripcion + hashtags (todo junto, max 2200)
     if (redes.ig) {
       const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('instagram_title', igCaption)
       form.append('media_type', 'REELS')
       form.append('share_to_feed', 'true')
-      form.append('thumb_offset', '1000')  // frame en ms — Instagram elige portada del video
+      form.append('thumb_offset', '1000')
     }
 
-    // TIKTOK — caption (max 2200) + cover_timestamp (TikTok no acepta imagen externa como portada)
-    // La portada de TikTok es siempre un frame del video, se define con cover_timestamp en ms
+    // TIKTOK — caption completo + frame como portada
     if (redes.tt) {
       const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('tiktok_title', ttCaption)
-      form.append('cover_timestamp', '1000')  // frame en ms 1 segundo — ajustar según el video
+      form.append('cover_timestamp', '1000')
     }
 
-    // YOUTUBE — titulo SEO + descripcion completa + thumbnail 16:9
+    // YOUTUBE — todos los campos correctos según la doc
     if (redes.yt) {
-      form.append('youtube_title', (contenido.yt_titulo || contenido.ig_titulo || '').slice(0, 100))
-      const ytDesc = [contenido.yt_descripcion, contenido.yt_keywords ? `\n\nKeywords: ${contenido.yt_keywords}` : '']
-        .filter(Boolean).join('')
-      form.append('youtube_description', ytDesc.slice(0, 5000))
+      form.append('youtube_title', (contenido.yt_titulo || '').slice(0, 100))
+
+      // Descripción + hashtags + keywords
+      const ytHashtags = contenido.yt_hashtags || ''
+      const ytKeywords = contenido.yt_keywords || ''
+      const ytDesc = [
+        contenido.yt_descripcion,
+        ytHashtags ? `\n\n${ytHashtags}` : '',
+        ytKeywords ? `\n\nKeywords: ${ytKeywords}` : ''
+      ].filter(Boolean).join('').slice(0, 5000)
+      form.append('youtube_description', ytDesc)
+
+      // Tags como array separado
+      if (ytKeywords) {
+        ytKeywords.split(',').map((t: string) => t.trim()).filter(Boolean).slice(0, 500).forEach((tag: string) => {
+          form.append('tags[]', tag)
+        })
+      }
+
+      // Thumbnail 16:9
       if (coverYoutube) form.append('thumbnail_url', coverYoutube)
+
+      // Idioma español, ubicación Buenos Aires Argentina
+      form.append('defaultLanguage', 'es')
+      form.append('defaultAudioLanguage', 'es-419')
+
+      // Fecha de publicación = hoy
+      const today = new Date().toISOString().split('T')[0]
+      form.append('recordingDate', new Date().toISOString())
+
+      // Categoría: People & Blogs (22), visible públicamente
+      form.append('categoryId', '22')
+      form.append('privacyStatus', 'public')
+      form.append('embeddable', 'true')
     }
 
-    // LINKEDIN — titulo + descripcion como commentary (max 3000)
+    // LINKEDIN — solo texto (video tiene más restricciones en LinkedIn API)
     if (redes.li) {
-      form.append('linkedin_title', (contenido.li_titulo || contenido.ig_titulo || '').slice(0, 200))
-      form.append('linkedin_description', (contenido.li_descripcion || contenido.ig_descripcion || '').slice(0, 3000))
+      const liTexto = [contenido.li_titulo, contenido.li_descripcion]
+        .filter(Boolean).join('\n\n').slice(0, 3000)
+      form.append('linkedin_title', liTexto)
       form.append('visibility', 'PUBLIC')
     }
 
-    // FACEBOOK — titulo corto (max 255) + descripcion separada
+    // FACEBOOK — Reels
     if (redes.fb) {
       form.append('facebook_title', (contenido.ig_titulo || '').slice(0, 255))
       form.append('facebook_description', (contenido.fb_descripcion || contenido.ig_descripcion || '').slice(0, 2000))
       form.append('facebook_media_type', 'REELS')
     }
 
-    // TWITTER/X — texto max 280 chars
+    // TWITTER/X
     if (redes.tw) {
       form.append('x_title', (contenido.tw_texto || contenido.ig_titulo || '').slice(0, 280))
     }
 
-    // THREADS — texto completo
+    // THREADS
     if (redes.th) {
       form.append('threads_title', (contenido.th_texto || contenido.ig_titulo || '').slice(0, 500))
+    }
+
+    console.log('=== FORM FIELDS ENVIADOS ===')
+    for (const [k, v] of form.entries()) {
+      console.log(`  ${k}: ${typeof v === 'string' ? v.slice(0, 150) : '[file]'}`)
     }
 
     const res = await fetch('https://api.upload-post.com/api/upload', {
@@ -90,16 +120,9 @@ export async function POST(req: NextRequest) {
     })
 
     const data = await res.json()
-    // Log completo para debug
-    console.log('=== UPLOAD POST RESPONSE ===')
-    console.log('HTTP status:', res.status)
-    console.log('Body:', JSON.stringify(data, null, 2))
-    console.log('=== FORM FIELDS ===')
-    for (const [k, v] of form.entries()) {
-      console.log(`  ${k}: ${typeof v === 'string' ? v.slice(0, 100) : '[file]'}`)
-    }
+    console.log('=== UPLOAD POST RESPONSE ===', JSON.stringify(data))
 
-    // Guardar request_id pero NO marcar como publicado aún — esperamos confirmación via status
+    // Guardar request_id
     if (data.request_id && SUPABASE_URL && SUPABASE_KEY) {
       await fetch(`${SUPABASE_URL}/rest/v1/contenido?id=eq.${contenido.id}`, {
         method: 'PATCH',
@@ -113,7 +136,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Si es sincrónico y ya tiene resultados, marcar publicado
+    // Si ya hay resultados sincrónicos
     if (data.results) {
       const updates: Record<string, any> = {}
       const results = data.results
@@ -124,7 +147,6 @@ export async function POST(req: NextRequest) {
       if (redes.fb && results.facebook?.success) { updates.fb_publicado = true; if (results.facebook?.url) updates.fb_post_id = results.facebook.url }
       if (redes.tw && results.x?.success) { updates.tw_publicado = true; if (results.x?.url) updates.tw_post_id = results.x.url }
       if (redes.th && results.threads?.success) { updates.th_publicado = true; if (results.threads?.url) updates.th_post_id = results.threads.url }
-
       if (Object.keys(updates).length > 0 && SUPABASE_URL && SUPABASE_KEY) {
         await fetch(`${SUPABASE_URL}/rest/v1/contenido?id=eq.${contenido.id}`, {
           method: 'PATCH',
