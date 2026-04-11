@@ -651,7 +651,7 @@ export default function Panel() {
         {/* Portada 16:9 — imagen completa sin recorte */}
         <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: '#000', overflow: 'hidden', flexShrink: 0 }}>
           {(c.portada_youtube_path || c.portada_vertical_path) ? (
-            <img src={`https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} onError={e => { e.currentTarget.style.display='none' }} />
+            <img src={c.portada_url || c.portada_url_vertical || `https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`} alt="portada" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} onError={e => { e.currentTarget.style.display='none' }} />
           ) : (
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>🎬</div>
           )}
@@ -809,7 +809,7 @@ export default function Panel() {
                     {/* PORTADA 16:9 */}
                     {(c.portada_youtube_path || c.portada_vertical_path) && (
                       <img
-                        src={`https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`}
+                        src={c.portada_url || c.portada_url_vertical || `https://n8n.borges.com.ar/videos/${c.portada_youtube_path || c.portada_vertical_path}`}
                         alt="portada"
                         style={{ width: 'auto', height: 220, objectFit: 'contain', display: 'block', margin: '16px auto 0', maxWidth: '100%', borderRadius: 8 }}
                         onError={e => (e.currentTarget.style.display = 'none')}
