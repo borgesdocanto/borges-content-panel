@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
     // Plataformas activas
     const platformMap: Record<string, string> = {
       ig: 'instagram', tt: 'tiktok', yt: 'youtube',
-      li: 'linkedin', fb: 'facebook', tw: 'x', th: 'threads'
+      fb: 'facebook', tw: 'x', th: 'threads'
+      // linkedin se publica por separado como foto
     }
     for (const [key, platform] of Object.entries(platformMap)) {
       if (redes[key]) form.append('platform[]', platform)
@@ -83,13 +84,8 @@ export async function POST(req: NextRequest) {
       form.append('embeddable', 'true')
     }
 
-    // LINKEDIN — solo texto (video tiene más restricciones en LinkedIn API)
-    if (redes.li) {
-      const liTexto = [contenido.li_titulo, contenido.li_descripcion]
-        .filter(Boolean).join('\n\n').slice(0, 3000)
-      form.append('linkedin_title', liTexto)
-      form.append('visibility', 'PUBLIC')
-    }
+    // LINKEDIN — se publica como FOTO separada (portada vertical con título y descripción)
+    // Se hace en llamada separada a /api/upload_photos después del video
 
     // FACEBOOK — Reels
     if (redes.fb) {
@@ -106,6 +102,32 @@ export async function POST(req: NextRequest) {
     // THREADS
     if (redes.th) {
       form.append('threads_title', (contenido.th_texto || contenido.ig_titulo || '').slice(0, 500))
+    }
+
+    // LINKEDIN — llamada separada a upload_photos con portada vertical
+    let linkedinPhotoRequestId: string | null = null
+    if (redes.li && contenido.portada_url_vertical) {
+      try {
+        const liForm = new FormData()
+        liForm.append('user', username)
+        liForm.append('platform[]', 'linkedin')
+        liForm.append('photos[]', contenido.portada_url_vertical)
+        liForm.append('async_upload', 'true')
+        const liTitulo = contenido.li_titulo || contenido.ig_titulo || ''
+        const liDesc = contenido.li_descripcion || contenido.ig_descripcion || ''
+        liForm.append('linkedin_title', [liTitulo, liDesc].filter(Boolean).join('\n\n').slice(0, 3000))
+        liForm.append('visibility', 'PUBLIC')
+        const liRes = await fetch('https://api.upload-post.com/api/upload_photos', {
+          method: 'POST',
+          headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
+          body: liForm
+        })
+        const liData = await liRes.json()
+        console.log('=== LINKEDIN PHOTO RESPONSE ===', JSON.stringify(liData))
+        if (liData.request_id) linkedinPhotoRequestId = liData.request_id
+      } catch(e: any) {
+        console.error('Error publicando foto LinkedIn:', e.message)
+      }
     }
 
     console.log('=== FORM FIELDS ENVIADOS ===')
