@@ -353,7 +353,11 @@ export default function Panel() {
   const [loadingGuion, setLoadingGuion] = useState(false)
   const [temaSeleccionado, setTemaSeleccionado] = useState('')
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const showToast = (msg: string) => {
+    setToast(msg)
+    // Errores no se auto-cierran — requieren click en X
+    if (!msg.startsWith('⚠️')) setTimeout(() => setToast(''), 4000)
+  }
 
   const ANTHROPIC_KEY = process.env.NEXT_PUBLIC_ANTHROPIC_KEY || ''
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string>('')
@@ -1539,7 +1543,10 @@ export default function Panel() {
       )}
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 20px', fontSize: 13, fontWeight: 500, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>{toast}</div>
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--bg2)', border: `1px solid ${toast.startsWith('⚠️') ? '#ef4444' : 'var(--border)'}`, borderRadius: 10, padding: '12px 16px 12px 20px', fontSize: 13, fontWeight: 500, zIndex: 2000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', maxWidth: 420, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <span style={{ flex: 1, lineHeight: 1.5, wordBreak: 'break-word' }}>{toast}</span>
+          <span onClick={() => setToast('')} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 16, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>✕</span>
+        </div>
       )}
     </div>
   )
