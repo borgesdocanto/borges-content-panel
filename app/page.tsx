@@ -513,6 +513,8 @@ export default function Panel() {
         console.log('Upload Post result:', JSON.stringify(result))
         // Mostrar error de LinkedIn inmediatamente si falló
         const liError = result.linkedin_error || null
+        const twError = result.x_error || null
+        if (twError) showToast('⚠️ X/Twitter: ' + twError)
         if (result.request_id) {
           showToast('📡 request_id: ' + result.request_id.slice(0, 12) + '...')
           // Polling: esperar que Upload Post procese y actualizar logos

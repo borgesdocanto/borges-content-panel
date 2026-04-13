@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
     // Plataformas activas
     const platformMap: Record<string, string> = {
       ig: 'instagram', tt: 'tiktok', yt: 'youtube',
-      fb: 'facebook', tw: 'x', th: 'threads'
-      // linkedin se publica por separado como foto
+      fb: 'facebook', th: 'threads'
+      // linkedin y twitter/x se publican por separado como fotos
     }
     for (const [key, platform] of Object.entries(platformMap)) {
       if (redes[key]) form.append('platform[]', platform)
@@ -94,57 +94,61 @@ export async function POST(req: NextRequest) {
       form.append('facebook_media_type', 'REELS')
     }
 
-    // TWITTER/X
-    if (redes.tw) {
-      form.append('x_title', (contenido.tw_texto || contenido.ig_titulo || '').slice(0, 280))
-    }
+    // TWITTER/X — se publica como FOTO separada (portada vertical + texto)
+    // Se hace en llamada separada a /api/upload_photos después del video
 
     // THREADS
     if (redes.th) {
       form.append('threads_title', (contenido.th_texto || contenido.ig_titulo || '').slice(0, 500))
     }
 
-    // LINKEDIN — llamada separada a upload_photos con portada vertical
-    // Descargamos la imagen de Supabase Storage y la enviamos como blob
-    let linkedinPhotoRequestId: string | null = null
-    let linkedinError: string | null = null
-    if (redes.li && contenido.portada_url_vertical) {
+    // Función helper para publicar foto en una red
+    const publicarFoto = async (platform: string, titulo: string): Promise<{request_id?: string, error?: string}> => {
+      if (!contenido.portada_url_vertical) return { error: 'Sin portada vertical' }
       try {
-        // Descargar imagen desde Supabase Storage
         const imgRes = await fetch(contenido.portada_url_vertical)
         if (!imgRes.ok) throw new Error(`No se pudo descargar portada: HTTP ${imgRes.status}`)
         const imgBlob = await imgRes.blob()
         const imgFile = new File([imgBlob], 'portada.jpg', { type: 'image/jpeg' })
-
-        const liForm = new FormData()
-        liForm.append('user', username)
-        liForm.append('platform[]', 'linkedin')
-        liForm.append('photos[]', imgFile, 'portada.jpg')
-        liForm.append('async_upload', 'true')
-        const liTitulo = contenido.li_titulo || contenido.ig_titulo || ''
-        const liDesc = contenido.li_descripcion || contenido.ig_descripcion || ''
-        liForm.append('linkedin_title', [liTitulo, liDesc].filter(Boolean).join('\n\n').slice(0, 3000))
-        liForm.append('visibility', 'PUBLIC')
-
-        console.log('=== LINKEDIN FORM FIELDS ===')
-        for (const [k, v] of liForm.entries()) {
-          console.log(`  ${k}: ${typeof v === 'string' ? v.slice(0, 200) : `[File: ${(v as File).name} ${(v as File).size}b ${(v as File).type}]`}`)
-        }
-        const liRes = await fetch('https://api.upload-post.com/api/upload_photos', {
+        const fotoForm = new FormData()
+        fotoForm.append('user', username)
+        fotoForm.append('platform[]', platform)
+        fotoForm.append('photos[]', imgFile, 'portada.jpg')
+        fotoForm.append('async_upload', 'true')
+        fotoForm.append('title', titulo.slice(0, 3000))
+        if (platform === 'linkedin') fotoForm.append('visibility', 'PUBLIC')
+        const fotoRes = await fetch('https://api.upload-post.com/api/upload_photos', {
           method: 'POST',
           headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
-          body: liForm
+          body: fotoForm
         })
-        const liData = await liRes.json()
-        console.log('=== LINKEDIN PHOTO RESPONSE ===', JSON.stringify(liData))
-        if (liData.request_id) linkedinPhotoRequestId = liData.request_id
-        if (!liData.success && !liData.request_id) {
-          linkedinError = liData.message || liData.error || JSON.stringify(liData)
-        }
+        const fotoData = await fotoRes.json()
+        console.log(`=== ${platform.toUpperCase()} PHOTO RESPONSE ===`, JSON.stringify(fotoData))
+        if (fotoData.request_id) return { request_id: fotoData.request_id }
+        return { error: fotoData.message || fotoData.error || JSON.stringify(fotoData) }
       } catch(e: any) {
-        console.error('Error publicando foto LinkedIn:', e.message)
-        linkedinError = e.message
+        return { error: e.message }
       }
+    }
+
+    // LINKEDIN — foto con título y descripción
+    let linkedinPhotoRequestId: string | null = null
+    let linkedinError: string | null = null
+    if (redes.li && contenido.portada_url_vertical) {
+      const liTitulo = [contenido.li_titulo, contenido.li_descripcion].filter(Boolean).join('\n\n')
+      const liResult = await publicarFoto('linkedin', liTitulo)
+      if (liResult.request_id) linkedinPhotoRequestId = liResult.request_id
+      else linkedinError = liResult.error || null
+    }
+
+    // TWITTER/X — foto con texto corto (max 280)
+    let xPhotoRequestId: string | null = null
+    let xError: string | null = null
+    if (redes.tw && contenido.portada_url_vertical) {
+      const twTitulo = (contenido.tw_texto || contenido.ig_titulo || '').slice(0, 280)
+      const twResult = await publicarFoto('x', twTitulo)
+      if (twResult.request_id) xPhotoRequestId = twResult.request_id
+      else xError = twResult.error || null
     }
 
     console.log('=== FORM FIELDS ENVIADOS ===')
@@ -200,7 +204,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ...data, linkedin_error: linkedinError, linkedin_request_id: linkedinPhotoRequestId })
+    return NextResponse.json({ ...data, linkedin_error: linkedinError, linkedin_request_id: linkedinPhotoRequestId, x_error: xError, x_request_id: xPhotoRequestId })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
