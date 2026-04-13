@@ -128,14 +128,57 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // LINKEDIN — foto con título y descripción
+    // LINKEDIN — foto si hay portada, sino texto solo
     let linkedinPhotoRequestId: string | null = null
     let linkedinError: string | null = null
-    if (redes.li && contenido.portada_url_vertical) {
+    if (redes.li) {
       const liTitulo = [contenido.li_titulo, contenido.li_descripcion].filter(Boolean).join('\n\n')
-      const liResult = await publicarFoto('linkedin', liTitulo)
-      if (liResult.request_id) linkedinPhotoRequestId = liResult.request_id
-      else linkedinError = liResult.error || null
+      if (contenido.portada_url_vertical) {
+        // Intentar con foto
+        const liResult = await publicarFoto('linkedin', liTitulo)
+        if (liResult.request_id) {
+          linkedinPhotoRequestId = liResult.request_id
+        } else {
+          // Foto falló — publicar solo texto como fallback
+          console.log('LinkedIn foto falló, intentando solo texto:', liResult.error)
+          try {
+            const liTextForm = new FormData()
+            liTextForm.append('user', username)
+            liTextForm.append('platform[]', 'linkedin')
+            liTextForm.append('async_upload', 'true')
+            liTextForm.append('title', liTitulo.slice(0, 3000))
+            liTextForm.append('visibility', 'PUBLIC')
+            const liTextRes = await fetch('https://api.upload-post.com/api/upload_text', {
+              method: 'POST',
+              headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
+              body: liTextForm
+            })
+            const liTextData = await liTextRes.json()
+            console.log('=== LINKEDIN TEXT FALLBACK ===', JSON.stringify(liTextData))
+            if (liTextData.request_id) linkedinPhotoRequestId = liTextData.request_id
+            else linkedinError = liTextData.message || liTextData.error || 'Error publicando LinkedIn'
+          } catch(e: any) { linkedinError = e.message }
+        }
+      } else {
+        // Sin portada — publicar solo texto directamente
+        try {
+          const liTextForm = new FormData()
+          liTextForm.append('user', username)
+          liTextForm.append('platform[]', 'linkedin')
+          liTextForm.append('async_upload', 'true')
+          liTextForm.append('title', liTitulo.slice(0, 3000))
+          liTextForm.append('visibility', 'PUBLIC')
+          const liTextRes = await fetch('https://api.upload-post.com/api/upload_text', {
+            method: 'POST',
+            headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
+            body: liTextForm
+          })
+          const liTextData = await liTextRes.json()
+          console.log('=== LINKEDIN TEXT (sin portada) ===', JSON.stringify(liTextData))
+          if (liTextData.request_id) linkedinPhotoRequestId = liTextData.request_id
+          else linkedinError = liTextData.message || liTextData.error || 'Error publicando LinkedIn'
+        } catch(e: any) { linkedinError = e.message }
+      }
     }
 
     // TWITTER/X — foto con texto corto (max 280)
