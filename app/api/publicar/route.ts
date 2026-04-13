@@ -196,14 +196,20 @@ export async function POST(req: NextRequest) {
       console.log(`  ${k}: ${typeof v === 'string' ? v.slice(0, 150) : '[file]'}`)
     }
 
-    const res = await fetch('https://api.upload-post.com/api/upload', {
-      method: 'POST',
-      headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
-      body: form
-    })
-
-    const data = await res.json()
-    console.log('=== UPLOAD POST RESPONSE ===', JSON.stringify(data))
+    // Solo llamar al endpoint de video si hay plataformas que lo requieren
+    const videoPlatforms = [...form.getAll('platform[]')]
+    let data: any = { success: true, skipped: true }
+    if (videoPlatforms.length > 0) {
+      const res = await fetch('https://api.upload-post.com/api/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Apikey ${UPLOAD_POST_KEY}` },
+        body: form
+      })
+      data = await res.json()
+      console.log('=== UPLOAD POST RESPONSE ===', JSON.stringify(data))
+    } else {
+      console.log('=== UPLOAD VIDEO SKIPPED — solo redes de foto ===')
+    }
 
     // Guardar request_id
     if (data.request_id && SUPABASE_URL && SUPABASE_KEY) {
