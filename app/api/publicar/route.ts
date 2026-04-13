@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
       // Idioma español, ubicación Buenos Aires Argentina
       form.append('defaultLanguage', 'es')
-      form.append('defaultAudioLanguage', 'es-419')
+      form.append('defaultAudioLanguage', 'es-US')
 
       // Fecha de publicación = hoy
       const today = new Date().toISOString().split('T')[0]
