@@ -50,22 +50,19 @@ export async function POST(req: NextRequest) {
     if (redes.yt) {
       form.append('youtube_title', (contenido.yt_titulo || '').slice(0, 100))
 
-      // Descripción + hashtags + keywords
+      // Descripción solo con el texto — sin keywords
       const ytHashtags = contenido.yt_hashtags || ''
       const ytKeywords = contenido.yt_keywords || ''
       const ytDesc = [
         contenido.yt_descripcion,
-        ytHashtags ? `\n\n${ytHashtags}` : '',
-        ytKeywords ? `\n\nKeywords: ${ytKeywords}` : ''
+        ytHashtags ? `\n\n${ytHashtags}` : ''
       ].filter(Boolean).join('').slice(0, 5000)
       form.append('youtube_description', ytDesc)
 
-      // Tags como array separado
-      if (ytKeywords) {
-        ytKeywords.split(',').map((t: string) => t.trim()).filter(Boolean).slice(0, 500).forEach((tag: string) => {
-          form.append('tags[]', tag)
-        })
-      }
+      // Tags como array — keywords del copy + "inmobiliaria" siempre presente
+      const tagsList: string[] = ytKeywords.split(',').map((t: string) => t.trim()).filter(Boolean)
+      if (!tagsList.map(t => t.toLowerCase()).includes('inmobiliaria')) tagsList.unshift('inmobiliaria')
+      tagsList.slice(0, 500).forEach((tag: string) => form.append('tags[]', tag))
 
       // Thumbnail 16:9
       if (coverYoutube) form.append('thumbnail_url', coverYoutube)
