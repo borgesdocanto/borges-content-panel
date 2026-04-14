@@ -9,7 +9,8 @@ export async function POST(req: NextRequest) {
     const { contenido, redes, username } = await req.json()
 
     const videoUrl = `https://drive.google.com/uc?export=download&id=${contenido.file_id_drive}&confirm=t`
-    const coverYoutube = contenido.portada_url || ''  // 16:9 YouTube JPEG
+    const coverVertical = contenido.portada_url_vertical || ''  // 9:16 Instagram JPEG
+    const coverYoutube = contenido.portada_url || ''            // 16:9 YouTube JPEG
 
     const form = new FormData()
     form.append('user', username)
@@ -28,14 +29,20 @@ export async function POST(req: NextRequest) {
       if (redes[key]) form.append('platform[]', platform)
     }
 
-    // INSTAGRAM — caption = titulo + descripcion + hashtags (todo junto, max 2200)
+    // INSTAGRAM — caption completo + portada vertical como cover_url (JPEG requerido)
     if (redes.ig) {
       const igCaption = [contenido.ig_titulo, contenido.ig_descripcion, contenido.ig_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('instagram_title', igCaption)
       form.append('media_type', 'REELS')
       form.append('share_to_feed', 'true')
-      form.append('thumb_offset', '1000')
+      // cover_url: portada vertical JPG desde Supabase Storage (acceso público)
+      // Si no hay portada, usa thumb_offset como fallback (frame del video)
+      if (coverVertical) {
+        form.append('cover_url', coverVertical)
+      } else {
+        form.append('thumb_offset', '1000')
+      }
     }
 
     // TIKTOK — caption completo + frame como portada
