@@ -626,6 +626,50 @@ export default function Panel() {
     setSaving(false); showToast('✅ Configuración guardada')
   }
 
+  // Verificar y actualizar estado de publicación para un contenido con request_id pendiente
+  const verificarEstadoPublicacion = async (c: Contenido) => {
+    if (!c.upload_post_request_id) return
+    try {
+      const res = await fetch(`/api/upload-status?request_id=${c.upload_post_request_id}`)
+      const data = await res.json()
+      if (!data.results) return
+      const r = data.results
+      const updates: Record<string, any> = {}
+      if (r.instagram?.success && !c.ig_publicado) { updates.ig_publicado = true; if (r.instagram.url) updates.ig_post_id = r.instagram.url }
+      if (r.tiktok?.success && !c.tt_publicado) { updates.tt_publicado = true; if (r.tiktok.url) updates.tt_post_id = r.tiktok.url }
+      if (r.youtube?.success && !c.yt_publicado) { updates.yt_publicado = true; if (r.youtube.url) updates.yt_post_id = r.youtube.url }
+      if (r.linkedin?.success && !c.li_publicado) { updates.li_publicado = true; if (r.linkedin.url) updates.li_post_id = r.linkedin.url }
+      if (r.facebook?.success && !c.fb_publicado) { updates.fb_publicado = true; if (r.facebook.url) updates.fb_post_id = r.facebook.url }
+      if (r.x?.success && !c.tw_publicado) { updates.tw_publicado = true; if (r.x.url) updates.tw_post_id = r.x.url }
+      if (r.threads?.success && !c.th_publicado) { updates.th_publicado = true; if (r.threads.url) updates.th_post_id = r.threads.url }
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('contenido').update(updates).eq('id', c.id)
+        return true // hubo actualizaciones
+      }
+    } catch(e) { /* silencioso */ }
+    return false
+  }
+
+  // Al cargar el panel, verificar posts recientes (últimas 4 horas) con request_id y logos pendientes
+  useEffect(() => {
+    if (contenidos.length === 0) return
+    const haceCuatroHoras = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+    const pendientes = contenidos.filter(c =>
+      c.upload_post_request_id &&
+      c.estado === 'aprobado' &&
+      (!c.ig_publicado || !c.tt_publicado || !c.yt_publicado) &&
+      (c.fecha_aprobacion > haceCuatroHoras)
+    )
+    if (pendientes.length === 0) return
+    // Verificar con delay escalonado para no saturar la API
+    pendientes.forEach((c, i) => {
+      setTimeout(async () => {
+        const actualizado = await verificarEstadoPublicacion(c)
+        if (actualizado) fetchData()
+      }, i * 3000)
+    })
+  }, [contenidos.length])
+
   const confirmarEliminar = async () => {
     if (!deleteModal) return
     await supabase.from('contenido').delete().eq('id', deleteModal.id)
