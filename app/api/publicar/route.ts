@@ -45,12 +45,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // TIKTOK — caption completo + frame como portada
+    // TIKTOK — caption completo + portada vertical como cover_url
     if (redes.tt) {
       const ttCaption = [contenido.tt_titulo, contenido.tt_descripcion, contenido.tt_hashtags]
         .filter(Boolean).join('\n\n').slice(0, 2200)
       form.append('tiktok_title', ttCaption)
-      form.append('cover_timestamp', '1000')
+      // cover_timestamp define qué frame del video usar como portada (ms)
+      // TikTok API no acepta imagen externa — usamos frame del video
+      form.append('cover_timestamp', '2000')
     }
 
     // YOUTUBE — todos los campos correctos según la doc
@@ -101,7 +103,7 @@ export async function POST(req: NextRequest) {
     // TWITTER/X — se publica como FOTO separada (portada vertical + texto)
     // Se hace en llamada separada a /api/upload_photos después del video
 
-    // THREADS
+    // THREADS — texto + cover vertical si hay portada
     if (redes.th) {
       form.append('threads_title', (contenido.th_texto || contenido.ig_titulo || '').slice(0, 500))
     }

@@ -526,8 +526,7 @@ export default function Panel() {
               const sd = await sr.json()
               console.log('Poll status:', sd.status, JSON.stringify(sd.results))
               const stillProcessing = ['pending','queued','processing','in_progress'].includes(sd.status)
-              // Procesar results aunque esté processing — puede tener resultados parciales ya completados
-              if (sd.results && (sd.status === 'completed' || sd.status === 'failed' || !stillProcessing)) {
+              if (sd.results) {
                 const updates: Record<string, boolean> = {}
                 const r = sd.results
                 if (redes.ig && r.instagram?.success) updates.ig_publicado = true
@@ -537,21 +536,26 @@ export default function Panel() {
                 if (redes.fb && r.facebook?.success) updates.fb_publicado = true
                 if (redes.tw && r.x?.success) updates.tw_publicado = true
                 if (redes.th && r.threads?.success) updates.th_publicado = true
+                // Guardar logos de redes que ya terminaron
                 if (Object.keys(updates).length > 0) {
                   await supabase.from('contenido').update(updates).eq('id', id)
                   await fetchData()
-                  showToast(liError ? `⚠️ LinkedIn: ${liError}` : '✅ Publicado — logos actualizados')
-                  return
-                } else {
-                  // Mostrar errores por plataforma
-                  const errores = Object.entries(r).filter(([,v]: any) => !v.success && v.message).map(([k,v]: any) => `${k}: ${v.message||v.error}`).join(' | ')
-                  showToast('⚠️ ' + (errores || 'Sin éxito en redes — revisá Upload Post dashboard'))
-                  await fetchData()
+                }
+                // Si terminó de procesar todas, mostrar resultado final
+                if (!stillProcessing) {
+                  const errores = Object.entries(r)
+                    .filter(([,v]: any) => !v.success)
+                    .map(([k,v]: any) => `${k}: ${(v as any).message||(v as any).error||'error'}`)
+                    .join(' | ')
+                  const exito = Object.keys(updates).length > 0
+                  showToast(exito
+                    ? (errores ? `✅ Parcial ⚠️ ${errores}` : (liError ? `✅ Publicado (LinkedIn: ${liError})` : '✅ Publicado — logos actualizados'))
+                    : `⚠️ ${errores || 'Sin éxito — revisá Upload Post'}`)
                   return
                 }
               }
               if (stillProcessing || intentos < 15) setTimeout(poll, 8000)
-              else { await fetchData(); showToast('⏳ Procesando en segundo plano') }
+              else { await fetchData(); showToast('⏳ Publicado — actualizá la página para ver logos') }
             } catch(e) { if (intentos < 15) setTimeout(poll, 8000) }
           }
           setTimeout(poll, 8000)
@@ -1490,7 +1494,7 @@ export default function Panel() {
                       const sd = await sr.json()
                       console.log('Poll2 status:', sd.status, JSON.stringify(sd.results))
                       const stillProcessing2 = ['pending','queued','processing','in_progress'].includes(sd.status)
-                      if (sd.results && (sd.status === 'completed' || sd.status === 'failed' || !stillProcessing2)) {
+                      if (sd.results) {
                         const updates: Record<string, boolean> = {}
                         const r2 = sd.results
                         if (redesObj.ig && r2.instagram?.success) updates.ig_publicado = true
@@ -1503,17 +1507,21 @@ export default function Panel() {
                         if (Object.keys(updates).length > 0) {
                           await supabase.from('contenido').update(updates).eq('id', cont.id)
                           await fetchData()
-                          showToast('✅ Publicado — logos actualizados')
-                          return
-                        } else {
-                          const errores2 = Object.entries(r2).filter(([,v]: any) => !v.success && v.message).map(([k,v]: any) => `${k}: ${v.message||v.error}`).join(' | ')
-                          showToast('⚠️ ' + (errores2 || 'Sin éxito en redes — revisá Upload Post dashboard'))
-                          await fetchData()
+                        }
+                        if (!stillProcessing2) {
+                          const errores2 = Object.entries(r2)
+                            .filter(([,v]: any) => !v.success)
+                            .map(([k,v]: any) => `${k}: ${(v as any).message||(v as any).error||'error'}`)
+                            .join(' | ')
+                          const exito2 = Object.keys(updates).length > 0
+                          showToast(exito2
+                            ? (errores2 ? `✅ Parcial ⚠️ ${errores2}` : '✅ Publicado — logos actualizados')
+                            : `⚠️ ${errores2 || 'Sin éxito — revisá Upload Post'}`)
                           return
                         }
                       }
                       if (stillProcessing2 || intentos2 < 15) setTimeout(poll2, 8000)
-                      else { await fetchData(); showToast('⏳ Procesando en segundo plano') }
+                      else { await fetchData(); showToast('⏳ Publicado — actualizá la página para ver logos') }
                     } catch(e) { if (intentos2 < 15) setTimeout(poll2, 8000) }
                   }
                   setTimeout(poll2, 8000)
