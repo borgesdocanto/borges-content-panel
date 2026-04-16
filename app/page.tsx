@@ -322,6 +322,8 @@ export default function Panel() {
   const [aprobando, setAprobando] = useState<string>('')
   const [redesActivas, setRedesActivas] = useState<Record<string, Record<string, boolean>>>({})
   const [uploadPostUsername, setUploadPostUsername] = useState<string>('')
+  const [promptPersonalizado, setPromptPersonalizado] = useState<string>('')
+  const [nombreDisplay, setNombreDisplay] = useState<string>('')
 
   const toggleRed = (contenidoId: string, red: string) => {
     setRedesActivas(prev => ({
@@ -460,9 +462,13 @@ export default function Panel() {
       supabase.from('contenido').select('*').eq('user_id', USER_ID_FETCH).order('fecha_aprobacion', { ascending: false }),
       supabase.from('config').select('*'),
       supabase.from('usuario_config').select('parametro,valor').eq('user_id', USER_ID_FETCH),
-      supabase.from('usuarios').select('upload_post_username').eq('id', USER_ID_FETCH).single()
+      supabase.from('usuarios').select('upload_post_username, prompt_personalizado').eq('id', USER_ID_FETCH).single()
     ])
     if (usr?.upload_post_username) setUploadPostUsername(usr.upload_post_username)
+    if (usr?.prompt_personalizado) setPromptPersonalizado(usr.prompt_personalizado)
+    // Cargar nombre_display desde usuario_branding
+    const { data: branding } = await supabase.from('usuario_branding').select('nombre_display').eq('user_id', USER_ID_FETCH).single()
+    if (branding?.nombre_display) setNombreDisplay(branding.nombre_display)
     if (cont) {
       setContenidos(cont)
       setPendientes(cont.filter((c: Contenido) => c.estado === 'pendiente_aprobacion'))
@@ -614,6 +620,16 @@ export default function Panel() {
 
   const USER_ID = currentUser?.id || ''
   const USER_CONFIG_KEYS = ['drive_carpeta_publicar', 'drive_carpeta_publicados', 'max_videos_diarios', 'autopublicacion', 'hora_instagram', 'hora_tiktok', 'hora_threads', 'hora_youtube', 'hora_linkedin', 'hora_twitter', 'dias_reposteo', 'score_reposteo', 'intervalo_horas', 'min_views']
+
+  const savePerfilUsuario = async () => {
+    setSaving(true)
+    await Promise.all([
+      supabase.from('usuarios').update({ prompt_personalizado: promptPersonalizado }).eq('id', USER_ID),
+      supabase.from('usuario_branding').upsert({ user_id: USER_ID, nombre_display: nombreDisplay }, { onConflict: 'user_id' })
+    ])
+    setSaving(false)
+    showToast('✅ Perfil guardado')
+  }
 
   const saveConfig = async () => {
     setSaving(true)
@@ -1292,6 +1308,51 @@ export default function Panel() {
                     </button>
                   </Card>
                 </div>
+
+                {/* PERFIL Y CONTENIDO */}
+                <Card style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Perfil y contenido</div>
+
+                  {/* Nombre display */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>👤 Tu nombre o marca</div>
+                    <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.5 }}>
+                      Cómo querés aparecer en el copy generado. Ej: <em>Leandro Borges Inmobiliaria</em>
+                    </div>
+                    <input type="text" placeholder="Tu nombre o marca..." value={nombreDisplay}
+                      onChange={e => setNombreDisplay(e.target.value)}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: 6, fontSize: 13, width: '100%' }} />
+                  </div>
+
+                  {/* Prompt personalizado */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>🤖 Prompt personalizado para Claude</div>
+                    <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.5 }}>
+                      Describí tu perfil profesional, zona de trabajo, tipo de propiedades, tono de comunicación y cualquier instrucción especial para la generación de copy. Mientras más detalle, mejor el resultado.
+                    </div>
+                    <textarea
+                      value={promptPersonalizado}
+                      onChange={e => setPromptPersonalizado(e.target.value)}
+                      placeholder={"Ejemplo: Soy martillero y corredor público en Buenos Aires, especializado en propiedades residenciales en zona norte (Pilar, Nordelta, Tigre). Mi estilo es profesional pero cercano. Me dirijo a familias de clase media-alta que buscan su primera casa o invierten en propiedades. Siempre mencionar ubicación y servicios del barrio. Usar emojis con moderación."}
+                      rows={6}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 12px', borderRadius: 6, fontSize: 13, width: '100%', resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit' }}
+                    />
+                  </div>
+
+                  {/* Upload Post username (readonly) */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>🔗 Username de Upload Post</div>
+                    <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.5 }}>
+                      Tu identificador en Upload Post. Usalo para conectar tus redes sociales en la sección Redes.
+                    </div>
+                    <input type="text" value={uploadPostUsername} readOnly
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', padding: '8px 12px', borderRadius: 6, fontSize: 13, width: '100%', cursor: 'default' }} />
+                  </div>
+
+                  <button onClick={savePerfilUsuario} disabled={saving} style={{ width: '100%', padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: saving ? 'var(--border)' : 'var(--gold)', color: saving ? 'var(--text2)' : '#000' }}>
+                    {saving ? 'Guardando...' : 'Guardar perfil'}
+                  </button>
+                </Card>
 
                 {/* GOOGLE DRIVE */}
                 <Card style={{ marginTop: 20 }}>
