@@ -782,8 +782,8 @@ export default function Panel() {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
-            <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px' }}>Ver copy</Btn>
+          <div style={{ display: 'flex', gap: 6, marginTop: 'auto', flexWrap: 'wrap' }}>
+            <Btn onClick={() => setSelectedContent(c)} style={{ flex: 1, textAlign: 'center', padding: '6px 10px', minWidth: 80 }}>Ver copy</Btn>
             {c.upload_post_request_id && (
               <Btn variant="ghost" onClick={async () => {
                 const res = await fetch(`/api/upload-status?request_id=${c.upload_post_request_id}`)
@@ -808,12 +808,20 @@ export default function Panel() {
                 } else {
                   showToast(`Estado Upload Post: ${data.status || 'sin datos'}`)
                 }
-              }} style={{ padding: '6px 10px' }} title="Verificar estado de publicación">🔄</Btn>
+              }} style={{ padding: '6px 10px' }} title="Verificar estado">🔄</Btn>
             )}
             <Btn variant="ghost" onClick={() => {
               setDeleteRedes([])
               setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo, ig_publicado: c.ig_publicado, tt_publicado: c.tt_publicado, yt_publicado: c.yt_publicado, li_publicado: c.li_publicado, fb_publicado: c.fb_publicado, tw_publicado: c.tw_publicado, th_publicado: c.th_publicado })
-            }} style={{ padding: '6px 10px' }}>📡</Btn>
+            }} style={{ padding: '6px 10px' }} title="Republicar">📡</Btn>
+            <Btn variant="ghost" onClick={async () => {
+              if (!confirm('¿Eliminás este contenido? Esta acción no se puede deshacer.')) return
+              const { data: cont } = await supabase.from('contenido').select('file_id_drive, user_id').eq('id', c.id).single()
+              await supabase.from('contenido').delete().eq('id', c.id)
+              if (cont) await supabase.from('cola').update({ estado: 'rechazado' }).eq('file_id_drive', cont.file_id_drive).eq('user_id', cont.user_id)
+              showToast('🗑 Eliminado')
+              fetchData()
+            }} style={{ padding: '6px 10px', color: '#ef4444' }} title="Eliminar">🗑</Btn>
           </div>
         </div>
       </div>
@@ -1051,7 +1059,7 @@ export default function Panel() {
                 {contenidos.length === 0 ? (
                   <Card><div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)', fontSize: 14 }}>No hay contenidos. Subí videos a Google Drive.</div></Card>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="cards-grid">
                     {contenidos.slice(0, 21).map(c => <VideoCard key={c.id} c={c} />)}
                   </div>
                 )}
@@ -1075,7 +1083,7 @@ export default function Panel() {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                <div className="cards-grid">
                   {contenidosFiltrados.map(c => <VideoCard key={c.id} c={c} />)}
                 </div>
               </div>
@@ -1106,7 +1114,7 @@ export default function Panel() {
                     <span onClick={() => navegarA('pendientes')} style={{ cursor: 'pointer', textDecoration: 'underline', marginLeft: 8 }}>Ver →</span>
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                <div className="cards-grid">
                   {contenidosFiltrados.map(c => <VideoCard key={c.id} c={c} />)}
                 </div>
                 {contenidosFiltrados.length === 0 && (
@@ -1699,20 +1707,8 @@ export default function Panel() {
               📤 Republicar seleccionadas →
             </button>
 
-            {/* Sección eliminar */}
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.5 }}>
-                ⚠️ Eliminar el registro de la app. El video <strong>sigue publicado</strong> en las redes sociales.
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <Btn onClick={() => setDeleteModal(null)} style={{ flex: 1 }}>Cancelar</Btn>
-                <button
-                  onClick={confirmarEliminar}
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444' }}
-                >
-                  🗑 Eliminar de la app
-                </button>
-              </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn onClick={() => setDeleteModal(null)} style={{ flex: 1 }}>Cancelar</Btn>
             </div>
           </div>
         </div>
