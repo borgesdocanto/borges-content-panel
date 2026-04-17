@@ -67,3 +67,20 @@ input:focus, textarea:focus, select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+
+/* ===== RESPONSIVE ===== */
+.sidebar-mobile { display: none !important; }
+
+@media (max-width: 768px) {
+  .sidebar-desktop { display: none !important; }
+  .sidebar-mobile { display: flex !important; }
+  .mobile-header { display: flex !important; }
+  .main-content {
+    margin-left: 0 !important;
+    padding: 72px 16px 24px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-header { display: none !important; }
+}

@@ -307,7 +307,17 @@ export default function Panel() {
       return next
     })
   }
-  const [page, setPage] = useState('pendientes')
+  const [page, setPage] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('postia_page') || 'pendientes'
+    return 'pendientes'
+  })
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const navegarA = (id: string) => {
+    setPage(id)
+    localStorage.setItem('postia_page', id)
+    setMenuOpen(false)
+  }
   const [contenidos, setContenidos] = useState<Contenido[]>([])
   const [config, setConfig] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -694,9 +704,15 @@ export default function Panel() {
 
   const confirmarEliminar = async () => {
     if (!deleteModal) return
+    // Buscar file_id_drive antes de eliminar
+    const { data: cont } = await supabase.from('contenido').select('file_id_drive, user_id').eq('id', deleteModal.id).single()
     await supabase.from('contenido').delete().eq('id', deleteModal.id)
+    // Marcar cola como rechazado para que el detector no lo reprocese
+    if (cont) {
+      await supabase.from('cola').update({ estado: 'rechazado' }).eq('file_id_drive', cont.file_id_drive).eq('user_id', cont.user_id)
+    }
     setDeleteModal(null)
-    showToast('🗑 Post eliminado de la app')
+    showToast('🗑 Eliminado correctamente')
     fetchData()
   }
 
@@ -809,57 +825,91 @@ export default function Panel() {
   if (!authed) return <LoginPage onLogin={() => setAuthed(true)} onRegister={() => setShowRegister(true)} />
   if (authed && onboarding) return <OnboardingPage userId={currentUser?.id || ''} onComplete={() => { setOnboarding(false); fetchData() }} />
 
+  const NAV_ITEMS = [
+    { id: 'pendientes', icon: '⏳', label: 'Pendientes', badge: pendientes.length },
+    { id: 'publicaciones', icon: '📱', label: 'Publicaciones' },
+    { id: 'metricas', icon: '📊', label: 'Métricas' },
+    { id: 'tendencias', icon: '🔥', label: 'Tendencias' },
+    { id: 'redes', icon: '🌐', label: 'Redes Sociales' },
+    { id: 'config', icon: '⚙️', label: 'Config' },
+  ]
+
+  const SidebarContent = () => (
+    <>
+      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <img src="/postia-logo.svg" alt="PostIA" style={{ height: 36, width: 'auto' }} />
+          <span onClick={() => setMenuOpen(false)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20, display: 'none' }} className="menu-close">✕</span>
+        </div>
+      </div>
+      <nav style={{ padding: '16px 12px', flex: 1 }}>
+        {NAV_ITEMS.map(item => (
+          <div key={item.id} onClick={() => navegarA(item.id)} style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
+            color: page === item.id ? 'var(--accent)' : 'var(--text2)',
+            background: page === item.id ? 'rgba(232,71,42,0.08)' : 'transparent',
+            fontSize: 13, fontWeight: page === item.id ? 600 : 400, marginBottom: 1,
+            borderLeft: page === item.id ? '3px solid var(--accent)' : '3px solid transparent',
+            transition: 'all 0.15s'
+          }}>
+            <span style={{ width: 18, textAlign: 'center', fontSize: 14 }}>{item.icon}</span> {item.label}
+            {(item as any).badge > 0 && <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '2px 6px' }}>{(item as any).badge}</span>}
+          </div>
+        ))}
+      </nav>
+      <div style={{ padding: '0 12px 16px' }}>
+        <div onClick={togglePause} style={{
+          padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 600, marginBottom: 8,
+          background: paused ? 'rgba(16,185,129,0.1)' : 'rgba(232,71,42,0.08)',
+          border: `1px solid ${paused ? 'rgba(16,185,129,0.3)' : 'rgba(232,71,42,0.2)'}`,
+          color: paused ? 'var(--green)' : 'var(--accent)'
+        }}>{paused ? '▶ Reanudar sistema' : '⏸ Pausar todo'}</div>
+        <div onClick={toggleDark} style={{
+          padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 500,
+          background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', marginBottom: 8
+        }}>{darkMode ? '☀️ Modo claro' : '🌙 Modo oscuro'}</div>
+        <a href="http://n8n.borges.com.ar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
+          ⚙️ n8n
+        </a>
+        <div onClick={() => supabase.auth.signOut()} style={{ padding: '8px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)' }}>
+          Cerrar sesión
+        </div>
+      </div>
+    </>
+  )
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 100, boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/postia-logo.svg" alt="PostIA" style={{ height: 36, width: 'auto' }} />
-          </div>
-        </div>
-        <nav style={{ padding: '16px 12px', flex: 1 }}>
-          {[
-            { id: 'pendientes', icon: '⏳', label: 'Pendientes', badge: pendientes.length },
-            { id: 'publicaciones', icon: '📱', label: 'Publicaciones' },
-            { id: 'metricas', icon: '📊', label: 'Métricas' },
-            { id: 'tendencias', icon: '🔥', label: 'Tendencias' },
-            { id: 'redes', icon: '🌐', label: 'Redes Sociales' },
-            { id: 'config', icon: '⚙️', label: 'Config' },
-          ].map(item => (
-            <div key={item.id} onClick={() => setPage(item.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
-              color: page === item.id ? 'var(--accent)' : 'var(--text2)',
-              background: page === item.id ? 'rgba(232,71,42,0.08)' : 'transparent',
-              fontSize: 13, fontWeight: page === item.id ? 600 : 400, marginBottom: 1,
-              borderLeft: page === item.id ? '3px solid var(--accent)' : '3px solid transparent',
-              transition: 'all 0.15s'
-            }}>
-              <span style={{ width: 18, textAlign: 'center', fontSize: 14 }}>{item.icon}</span> {item.label}
-              {(item as any).badge > 0 && <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '2px 6px' }}>{(item as any).badge}</span>}
-            </div>
-          ))}
-        </nav>
-        <div style={{ padding: '0 12px 16px' }}>
-          <div onClick={togglePause} style={{
-            padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 600, marginBottom: 8,
-            background: paused ? 'rgba(16,185,129,0.1)' : 'rgba(232,71,42,0.08)',
-            border: `1px solid ${paused ? 'rgba(16,185,129,0.3)' : 'rgba(232,71,42,0.2)'}`,
-            color: paused ? 'var(--green)' : 'var(--accent)'
-          }}>{paused ? '▶ Reanudar sistema' : '⏸ Pausar todo'}</div>
-          <div onClick={toggleDark} style={{
-            padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 500,
-            background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)'
-          }}>{darkMode ? '☀️ Modo claro' : '🌙 Modo oscuro'}</div>
-          <a href="http://n8n.borges.com.ar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
-            ⚙️ n8n
-          </a>
-          <div onClick={() => supabase.auth.signOut()} style={{ padding: '8px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)' }}>
-            Cerrar sesión
-          </div>
-        </div>
+      {/* Overlay mobile */}
+      {menuOpen && (
+        <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99 }} />
+      )}
+
+      {/* Sidebar desktop */}
+      <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 100, boxShadow: 'var(--shadow-md)' }}
+        className="sidebar-desktop">
+        <SidebarContent />
       </aside>
 
-      <main style={{ marginLeft: 220, padding: 32, flex: 1, minWidth: 0 }}>
+      {/* Sidebar mobile */}
+      <aside style={{ position: 'fixed', left: menuOpen ? 0 : -260, top: 0, width: 260, height: '100vh', background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 200, boxShadow: 'var(--shadow-md)', transition: 'left 0.25s ease' }}
+        className="sidebar-mobile">
+        <SidebarContent />
+      </aside>
+
+      {/* Header mobile con hamburguesa */}
+      <div style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: 'var(--bg2)', borderBottom: '1px solid var(--border)', zIndex: 98, alignItems: 'center', padding: '0 16px', gap: 12 }}
+        className="mobile-header">
+        <button onClick={() => setMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 22, padding: 4, display: 'flex', alignItems: 'center' }}>
+          ☰
+        </button>
+        <img src="/postia-logo.svg" alt="PostIA" style={{ height: 30, width: 'auto' }} />
+        {pendientes.length > 0 && (
+          <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 10, fontSize: 11, fontWeight: 700, padding: '2px 8px' }}>{pendientes.length}</span>
+        )}
+      </div>
+
+      <main style={{ marginLeft: 220, padding: 32, flex: 1, minWidth: 0 }} className="main-content">
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text2)', fontSize: 14 }}>Cargando...</div>
         ) : (
@@ -1053,7 +1103,7 @@ export default function Panel() {
                 {pendientes.length > 0 && (
                   <div style={{ background: 'rgba(232,71,42,0.06)', border: '1px solid rgba(232,71,42,0.2)', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
                     ⏳ {pendientes.length} video{pendientes.length !== 1 ? 's' : ''} pendiente{pendientes.length !== 1 ? 's' : ''} de aprobación
-                    <span onClick={() => setPage('pendientes')} style={{ cursor: 'pointer', textDecoration: 'underline', marginLeft: 8 }}>Ver →</span>
+                    <span onClick={() => navegarA('pendientes')} style={{ cursor: 'pointer', textDecoration: 'underline', marginLeft: 8 }}>Ver →</span>
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
