@@ -603,9 +603,15 @@ export default function Panel() {
   }
 
   const rechazarContenido = async (id: string) => {
-    await supabase.from('contenido').update({ estado: 'rechazado' }).eq('id', id)
+    // Eliminar completamente de contenido y limpiar cola asociada
+    const { data: cont } = await supabase.from('contenido').select('file_id_drive, user_id').eq('id', id).single()
+    await supabase.from('contenido').delete().eq('id', id)
+    // Marcar en cola como rechazado para que el detector no lo reprocese
+    if (cont) {
+      await supabase.from('cola').update({ estado: 'rechazado' }).eq('file_id_drive', cont.file_id_drive).eq('user_id', cont.user_id)
+    }
     await fetchData()
-    showToast('Contenido rechazado')
+    showToast('🗑 Contenido eliminado')
   }
 
   const updateCopy = (id: string, field: string, value: string) => {
