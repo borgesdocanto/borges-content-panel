@@ -876,9 +876,14 @@ export default function Panel() {
           padding: '9px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 500,
           background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', marginBottom: 8
         }}>{darkMode ? '☀️ Modo claro' : '🌙 Modo oscuro'}</div>
-        <a href="http://n8n.borges.com.ar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
-          ⚙️ n8n
-        </a>
+        {currentUser?.email === 'borgesdocanto@gmail.com' && (<>
+          <a href="https://app.upload-post.com/calendar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
+            📅 Upload Post
+          </a>
+          <a href="http://n8n.borges.com.ar" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--gold)', background: 'var(--bg3)', textDecoration: 'none', marginBottom: 6 }}>
+            ⚙️ n8n
+          </a>
+        </>)}
         <div onClick={() => supabase.auth.signOut()} style={{ padding: '8px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)' }}>
           Cerrar sesión
         </div>
