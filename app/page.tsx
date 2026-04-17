@@ -469,7 +469,7 @@ export default function Panel() {
     const USER_ID_FETCH = session?.user?.id || ''
     if (!USER_ID_FETCH) { setLoading(false); return }
     const [{ data: cont }, { data: cfg }, { data: userCfg }, { data: usr }] = await Promise.all([
-      supabase.from('contenido').select('*').eq('user_id', USER_ID_FETCH).order('fecha_aprobacion', { ascending: false }),
+      supabase.from('contenido').select('*').eq('user_id', USER_ID_FETCH).order('created_at', { ascending: false }),
       supabase.from('config').select('*'),
       supabase.from('usuario_config').select('parametro,valor').eq('user_id', USER_ID_FETCH),
       supabase.from('usuarios').select('upload_post_username, prompt_personalizado').eq('id', USER_ID_FETCH).single()
