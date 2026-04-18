@@ -531,50 +531,64 @@ export default function Panel() {
         const liError = result.linkedin_error || null
         const twError = result.x_error || null
         if (twError) showToast('⚠️ X/Twitter: ' + twError)
-        if (result.request_id) {
-          showToast('📡 request_id: ' + result.request_id.slice(0, 12) + '...')
-          // Polling: esperar que Upload Post procese y actualizar logos
+        // Helper para hacer polling de un request_id y actualizar campos específicos
+        const pollRequestId = async (reqId: string, campoMap: Record<string, string>, intentosMax = 15) => {
           let intentos = 0
           const poll = async () => {
             intentos++
             try {
-              const sr = await fetch(`/api/upload-status?request_id=${result.request_id}`)
+              const sr = await fetch(`/api/upload-status?request_id=${reqId}`)
               const sd = await sr.json()
-              console.log('Poll status:', sd.status, JSON.stringify(sd.results))
+              console.log(`Poll [${reqId.slice(0,8)}] status:`, sd.status, JSON.stringify(sd.results))
               const stillProcessing = ['pending','queued','processing','in_progress'].includes(sd.status)
               if (sd.results) {
-                const updates: Record<string, boolean> = {}
-                const r = sd.results
-                if (redes.ig && r.instagram?.success) updates.ig_publicado = true
-                if (redes.tt && r.tiktok?.success) updates.tt_publicado = true
-                if (redes.yt && r.youtube?.success) updates.yt_publicado = true
-                if (redes.li && r.linkedin?.success) updates.li_publicado = true
-                if (redes.fb && r.facebook?.success) updates.fb_publicado = true
-                if (redes.tw && r.x?.success) updates.tw_publicado = true
-                if (redes.th && r.threads?.success) updates.th_publicado = true
-                // Guardar logos de redes que ya terminaron
+                const updates: Record<string, any> = {}
+                for (const [plat, campo] of Object.entries(campoMap)) {
+                  if (sd.results[plat]?.success) {
+                    updates[campo] = true
+                    const url = sd.results[plat]?.url
+                    if (url) {
+                      const urlCampo = campo.replace('_publicado', '_post_id')
+                      updates[urlCampo] = url
+                    }
+                  }
+                }
                 if (Object.keys(updates).length > 0) {
                   await supabase.from('contenido').update(updates).eq('id', id)
                   await fetchData()
                 }
-                // Si terminó de procesar todas, mostrar resultado final
-                if (!stillProcessing) {
-                  const errores = Object.entries(r)
-                    .filter(([,v]: any) => !v.success)
-                    .map(([k,v]: any) => `${k}: ${(v as any).message||(v as any).error||'error'}`)
-                    .join(' | ')
-                  const exito = Object.keys(updates).length > 0
-                  showToast(exito
-                    ? (errores ? `✅ Parcial ⚠️ ${errores}` : (liError ? `✅ Publicado (LinkedIn: ${liError})` : '✅ Publicado — logos actualizados'))
-                    : `⚠️ ${errores || 'Sin éxito — revisá Upload Post'}`)
-                  return
-                }
+                if (!stillProcessing) return
               }
-              if (stillProcessing || intentos < 15) setTimeout(poll, 8000)
-              else { await fetchData(); showToast('⏳ Publicado — actualizá la página para ver logos') }
-            } catch(e) { if (intentos < 15) setTimeout(poll, 8000) }
+              if (stillProcessing || intentos < intentosMax) setTimeout(poll, 8000)
+              else { await fetchData() }
+            } catch(e) { if (intentos < intentosMax) setTimeout(poll, 8000) }
           }
           setTimeout(poll, 8000)
+        }
+
+        if (result.request_id) {
+          showToast('📡 request_id: ' + result.request_id.slice(0, 12) + '...')
+          // Polling del request_id principal (video: ig, tt, yt, fb, th)
+          const camposPrincipales: Record<string, string> = {}
+          if (redes.ig) camposPrincipales['instagram'] = 'ig_publicado'
+          if (redes.tt) camposPrincipales['tiktok'] = 'tt_publicado'
+          if (redes.yt) camposPrincipales['youtube'] = 'yt_publicado'
+          if (redes.fb) camposPrincipales['facebook'] = 'fb_publicado'
+          if (redes.th) camposPrincipales['threads'] = 'th_publicado'
+          pollRequestId(result.request_id, camposPrincipales)
+        }
+        // Polling separado para LinkedIn (publica como foto/texto)
+        if (result.linkedin_request_id && redes.li) {
+          console.log('Polling LinkedIn request_id:', result.linkedin_request_id)
+          pollRequestId(result.linkedin_request_id, { 'linkedin': 'li_publicado' })
+        }
+        // Polling separado para X (publica como foto)
+        if (result.x_request_id && redes.tw) {
+          console.log('Polling X request_id:', result.x_request_id)
+          pollRequestId(result.x_request_id, { 'x': 'tw_publicado' })
+        }
+        if (result.request_id || result.linkedin_request_id || result.x_request_id) {
+          // ya lanzamos polling arriba
         } else if (result.success) {
           showToast('✅ Publicado en redes correctamente')
           await fetchData()
