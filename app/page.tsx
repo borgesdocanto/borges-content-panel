@@ -719,8 +719,9 @@ export default function Panel() {
   const scorePromedio = contenidos.length
     ? (contenidos.reduce((a, b) => a + (b.score_promedio || 0), 0) / contenidos.length).toFixed(1) : '0'
 
-  const contenidosFiltrados = filtroRed === 'todas' ? contenidos
-    : contenidos.filter(c => filtroRed === 'instagram' ? c.ig_titulo : filtroRed === 'tiktok' ? c.tt_titulo : filtroRed === 'youtube' ? c.yt_titulo : filtroRed === 'linkedin' ? c.li_titulo : true)
+  const contenidosPublicados = contenidos.filter(c => c.estado !== 'pendiente_aprobacion')
+  const contenidosFiltrados = filtroRed === 'todas' ? contenidosPublicados
+    : contenidosPublicados.filter(c => filtroRed === 'instagram' ? c.ig_titulo : filtroRed === 'tiktok' ? c.tt_titulo : filtroRed === 'youtube' ? c.yt_titulo : filtroRed === 'linkedin' ? c.li_titulo : true)
 
   // SVG icon helper
   const SvgIcon = ({ red, size = 18, redOverride }: { red: string; size?: number; redOverride?: string }) => {
