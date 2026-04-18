@@ -159,6 +159,8 @@ function OnboardingPage({ userId, onComplete }: { userId: string; onComplete: ()
       setLoading(false)
       return
     }
+    // Activar usuario ahora que tiene Drive configurado
+    await supabase.from('usuarios').update({ activo: true }).eq('id', uid)
     setLoading(false)
     setStep(3)
   }

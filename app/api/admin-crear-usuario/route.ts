@@ -25,12 +25,12 @@ export async function POST(req: NextRequest) {
     const userId = authData.user.id
     const username = email.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase() + Math.floor(Math.random() * 999)
 
-    // Crear en tabla usuarios
+    // Crear en tabla usuarios — activo: false hasta que complete onboarding
     await supabaseAdmin.from('usuarios').insert({
       id: userId,
       email,
       plan: 'starter',
-      activo: true,
+      activo: false,
       upload_post_username: username
     })
 
