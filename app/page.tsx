@@ -337,6 +337,69 @@ export default function Panel() {
   const [promptPersonalizado, setPromptPersonalizado] = useState<string>('')
   const [nombreDisplay, setNombreDisplay] = useState<string>('')
 
+  // ── Schedules de publicación ──
+  type ScheduleHora = { id: string; hora: string; schedule_id: string | null }
+  type ScheduleBloque = { id: string; dias_semana: number[]; horas: ScheduleHora[] }
+  const DIAS_LABELS = [
+    { id: 1, label: 'L' }, { id: 2, label: 'M' }, { id: 3, label: 'X' },
+    { id: 4, label: 'J' }, { id: 5, label: 'V' }, { id: 6, label: 'S' }, { id: 7, label: 'D' }
+  ]
+  const [schedules, setSchedules] = useState<ScheduleBloque[]>([])
+  const [savingSchedules, setSavingSchedules] = useState(false)
+  const [generandoAhora, setGenerandoAhora] = useState<string | null>(null)
+
+  const schedUid = () => 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2)
+
+  const cargarSchedules = async () => {
+    const uid = USER_ID || ''
+    if (!uid) return
+    const { data } = await supabase.from('schedule_publicacion').select('*').eq('user_id', uid).eq('activo', true).order('hora', { ascending: true })
+    const rows = data || []
+    if (rows.length === 0) {
+      setSchedules([{ id: schedUid(), dias_semana: [1,2,3,4,5,6,7], horas: [{ id: schedUid(), hora: '08:00:00', schedule_id: null }] }])
+      return
+    }
+    // Agrupar por días_semana
+    const mapa: Record<string, ScheduleBloque> = {}
+    for (const r of rows) {
+      const key = JSON.stringify((r.dias_semana || []).sort((a: number, b: number) => a - b))
+      if (!mapa[key]) mapa[key] = { id: schedUid(), dias_semana: [...(r.dias_semana || [])].sort((a, b) => a - b), horas: [] }
+      mapa[key].horas.push({ id: schedUid(), hora: r.hora, schedule_id: r.id })
+    }
+    setSchedules(Object.values(mapa))
+  }
+
+  const guardarSchedules = async () => {
+    const uid = USER_ID || ''
+    if (!uid) return
+    for (const b of schedules) {
+      if (!b.dias_semana.length || !b.horas.length) { showToast('Cada grupo necesita días y al menos una hora'); return }
+    }
+    setSavingSchedules(true)
+    await supabase.from('schedule_publicacion').delete().eq('user_id', uid)
+    const filas = schedules.flatMap(b => b.horas.map(h => ({
+      user_id: uid, hora: h.hora.length === 5 ? h.hora + ':00' : h.hora,
+      dias_semana: b.dias_semana, activo: true
+    })))
+    if (filas.length > 0) await supabase.from('schedule_publicacion').insert(filas)
+    setSavingSchedules(false)
+    showToast('✅ Horarios guardados')
+    cargarSchedules()
+  }
+
+  const generarAhoraSchedule = async (horaId: string) => {
+    const uid = USER_ID || ''
+    setGenerandoAhora(horaId)
+    try {
+      const res = await fetch('https://n8n.borges.com.ar/webhook/maestro-ejecutar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: uid, manual: true })
+      })
+      showToast(res.ok ? '✅ Generación iniciada — aparece en ~2 minutos' : '❌ Error al iniciar')
+    } catch { showToast('❌ Error de conexión') }
+    setGenerandoAhora(null)
+  }
+
   const toggleRed = (contenidoId: string, red: string) => {
     setRedesActivas(prev => ({
       ...prev,
@@ -496,6 +559,20 @@ export default function Panel() {
     setConfig(cfgMap)
     setLoading(false)
     loadTendencias()
+    // Cargar schedules de publicación
+    const { data: schedData } = await supabase.from('schedule_publicacion').select('*').eq('user_id', USER_ID_FETCH).eq('activo', true).order('hora', { ascending: true })
+    const schedRows = schedData || []
+    if (schedRows.length === 0) {
+      setSchedules([{ id: 'default', dias_semana: [1,2,3,4,5,6,7], horas: [{ id: 'default_h', hora: '08:00:00', schedule_id: null }] }])
+    } else {
+      const mapa: Record<string, ScheduleBloque> = {}
+      for (const r of schedRows) {
+        const key = JSON.stringify((r.dias_semana || []).sort((a: number, b: number) => a - b))
+        if (!mapa[key]) mapa[key] = { id: 'g_' + key, dias_semana: [...(r.dias_semana || [])].sort((a: number, b: number) => a - b), horas: [] }
+        mapa[key].horas.push({ id: 'h_' + r.id, hora: r.hora, schedule_id: r.id })
+      }
+      setSchedules(Object.values(mapa))
+    }
   }, [])
 
   useEffect(() => { if (authed) fetchData() }, [authed, fetchData])
@@ -1350,29 +1427,73 @@ export default function Panel() {
               <div>
                 <h2 style={{ fontWeight: 700, fontSize: 22, letterSpacing: 0, marginBottom: 24, color: 'var(--text)' }}>Configuración del sistema</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <Card>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Horarios de publicación</div>
-                    {[
-                      { label: 'Instagram', red: 'instagram', sub: 'Día 1', key: 'hora_instagram', default: '20:00' },
-                      { label: 'TikTok + Facebook', red: 'tiktok', sub: 'Día 2', key: 'hora_tiktok', default: '18:00' },
-                      { label: 'Threads', red: 'threads', sub: 'Día 2', key: 'hora_threads', default: '18:00' },
-                      { label: 'YouTube Shorts', red: 'youtube', sub: 'Día 2', key: 'hora_youtube', default: '21:00' },
-                      { label: 'LinkedIn', red: 'linkedin', sub: 'Día 2', key: 'hora_linkedin', default: '10:00' },
-                      { label: 'Twitter/X', red: 'twitter', sub: 'Día 2', key: 'hora_twitter', default: '21:00' },
-                    ].map(item => (
-                      <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <SvgIcon red={item.red} size={16} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text2)' }}>{item.sub}</div>
-                          </div>
+                  <Card style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Horarios de publicación</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16 }}>Elegí qué días y a qué horas publicar. Aplica a todas las redes.</div>
+
+                    {schedules.map((bloque, bIdx) => (
+                      <div key={bloque.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                        {/* Días */}
+                        <div style={{ fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, marginBottom: 8 }}>Días</div>
+                        <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
+                          {DIAS_LABELS.map(d => {
+                            const on = bloque.dias_semana.includes(d.id)
+                            return (
+                              <button key={d.id} onClick={() => {
+                                const next = on ? bloque.dias_semana.filter(x => x !== d.id) : [...bloque.dias_semana, d.id].sort((a,b) => a-b)
+                                setSchedules(prev => prev.map(b => b.id === bloque.id ? { ...b, dias_semana: next } : b))
+                              }} style={{
+                                width: 32, height: 32, borderRadius: 7, border: on ? '1.5px solid var(--gold)' : '1px solid var(--border)',
+                                background: on ? 'rgba(201,168,76,0.15)' : 'var(--bg2)', color: on ? 'var(--gold)' : 'var(--text2)',
+                                fontWeight: on ? 700 : 400, fontSize: 12, cursor: 'pointer', padding: 0, transition: 'all 0.15s'
+                              }}>{d.label}</button>
+                            )
+                          })}
                         </div>
-                        <input type="time" value={config[item.key] || item.default}
-                          onChange={e => setConfig(prev => ({ ...prev, [item.key]: e.target.value }))}
-                          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '6px 10px', borderRadius: 6, fontSize: 13 }} />
+
+                        {/* Horas */}
+                        <div style={{ fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, marginBottom: 6 }}>Horas</div>
+                        {bloque.horas.map(h => (
+                          <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <span style={{ color: 'var(--text2)', fontSize: 13 }}>⏱</span>
+                            <input type="time" value={h.hora.substring(0,5)}
+                              onChange={e => setSchedules(prev => prev.map(b => b.id === bloque.id ? { ...b, horas: b.horas.map(x => x.id === h.id ? { ...x, hora: e.target.value + ':00' } : x) } : b))}
+                              style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', padding: '5px 10px', borderRadius: 6, fontSize: 14, fontFamily: 'monospace', fontWeight: 600, outline: 'none' }} />
+                            <button onClick={() => setGenerandoAhora(prev => { generarAhoraSchedule(h.id); return prev })}
+                              disabled={generandoAhora === h.id}
+                              style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.05em' }}>
+                              {generandoAhora === h.id ? '...' : '▶ Ahora'}
+                            </button>
+                            <div style={{ flex: 1 }} />
+                            {bloque.horas.length > 1 && (
+                              <button onClick={() => setSchedules(prev => prev.map(b => b.id === bloque.id ? { ...b, horas: b.horas.filter(x => x.id !== h.id) } : b))}
+                                style={{ background: 'transparent', border: 'none', color: 'rgba(255,80,80,0.5)', cursor: 'pointer', fontSize: 18, padding: '0 4px' }}>×</button>
+                            )}
+                          </div>
+                        ))}
+                        <button onClick={() => setSchedules(prev => prev.map(b => b.id === bloque.id ? { ...b, horas: [...b.horas, { id: schedUid(), hora: '18:00:00', schedule_id: null }] } : b))}
+                          style={{ width: '100%', padding: '6px', borderRadius: 6, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text2)', fontSize: 12, cursor: 'pointer', marginTop: 4 }}>
+                          + Agregar hora
+                        </button>
+                        {schedules.length > 1 && (
+                          <button onClick={() => setSchedules(prev => prev.filter(b => b.id !== bloque.id))}
+                            style={{ background: 'transparent', border: 'none', color: 'rgba(255,80,80,0.4)', fontSize: 11, cursor: 'pointer', marginTop: 8, padding: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', float: 'right' }}>
+                            Eliminar grupo
+                          </button>
+                        )}
                       </div>
                     ))}
+
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <button onClick={() => setSchedules(prev => [...prev, { id: schedUid(), dias_semana: [1,2,3,4,5], horas: [{ id: schedUid(), hora: '10:00:00', schedule_id: null }] }])}
+                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text2)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        + Agregar grupo de días
+                      </button>
+                      <button onClick={guardarSchedules} disabled={savingSchedules}
+                        style={{ flex: 2, padding: '8px', borderRadius: 8, border: 'none', background: savingSchedules ? 'var(--border)' : 'var(--gold)', color: savingSchedules ? 'var(--text2)' : '#000', fontSize: 13, fontWeight: 700, cursor: savingSchedules ? 'not-allowed' : 'pointer' }}>
+                        {savingSchedules ? 'Guardando...' : 'Guardar horarios'}
+                      </button>
+                    </div>
                   </Card>
                   <Card>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Limpieza y reposteo</div>
