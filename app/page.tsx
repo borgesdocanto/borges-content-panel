@@ -327,6 +327,7 @@ export default function Panel() {
   const [selectedContent, setSelectedContent] = useState<Contenido | null>(null)
   const [deleteModal, setDeleteModal] = useState<{ id: string; nombre: string; ig_publicado?: boolean; tt_publicado?: boolean; yt_publicado?: boolean; li_publicado?: boolean; fb_publicado?: boolean; tw_publicado?: boolean; th_publicado?: boolean } | null>(null)
   const [deleteRedes, setDeleteRedes] = useState<string[]>([])
+  const [logModal, setLogModal] = useState<{ contenido: Contenido; uploadStatus: any | null; loading: boolean } | null>(null)
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
   const [pendientes, setPendientes] = useState<Contenido[]>([])
@@ -908,6 +909,21 @@ export default function Panel() {
               setDeleteRedes([])
               setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo, ig_publicado: c.ig_publicado, tt_publicado: c.tt_publicado, yt_publicado: c.yt_publicado, li_publicado: c.li_publicado, fb_publicado: c.fb_publicado, tw_publicado: c.tw_publicado, th_publicado: c.th_publicado })
             }} style={{ padding: '6px 10px' }} title="Republicar">📡</Btn>
+            <Btn variant="ghost" onClick={async () => {
+              const modal = { contenido: c, uploadStatus: null, loading: true }
+              setLogModal(modal)
+              if (c.upload_post_request_id) {
+                try {
+                  const res = await fetch(`/api/upload-status?request_id=${c.upload_post_request_id}`)
+                  const data = await res.json()
+                  setLogModal({ contenido: c, uploadStatus: data, loading: false })
+                } catch (e) {
+                  setLogModal({ contenido: c, uploadStatus: { error: 'No se pudo consultar Upload Post API' }, loading: false })
+                }
+              } else {
+                setLogModal({ contenido: c, uploadStatus: null, loading: false })
+              }
+            }} style={{ padding: '6px 10px' }} title="Ver log de publicación">📋</Btn>
             <Btn variant="ghost" onClick={async () => {
               if (!confirm('¿Eliminás este contenido? Esta acción no se puede deshacer.')) return
               const { data: cont } = await supabase.from('contenido').select('file_id_drive, user_id').eq('id', c.id).single()
@@ -1738,6 +1754,112 @@ export default function Panel() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL LOG DE PUBLICACIÓN */}
+      {logModal && (
+        <div onClick={() => setLogModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 500, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>📋 Log de publicación</div>
+              <span onClick={() => setLogModal(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>{logModal.contenido.ig_titulo || logModal.contenido.archivo}</div>
+
+            {/* Estado general */}
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>Estado del contenido</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text2)' }}>Estado</span>
+                  <span style={{ fontWeight: 600, color: logModal.contenido.estado === 'publicado' ? '#22c55e' : logModal.contenido.estado === 'aprobado' ? '#f59e0b' : '#94a3b8' }}>
+                    {logModal.contenido.estado}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text2)' }}>Creado</span>
+                  <span style={{ color: 'var(--text)' }}>{new Date(logModal.contenido.created_at).toLocaleString('es-AR')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text2)' }}>Upload Post request_id</span>
+                  <span style={{ color: logModal.contenido.upload_post_request_id ? '#22c55e' : '#ef4444', fontFamily: 'monospace', fontSize: 11, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {logModal.contenido.upload_post_request_id || '❌ Sin request_id — nunca se envió a Upload Post'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Estado por red */}
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>Estado por red social</div>
+              {[
+                { key: 'ig', label: 'Instagram', pub: logModal.contenido.ig_publicado, postId: logModal.contenido.ig_post_id },
+                { key: 'tt', label: 'TikTok',    pub: logModal.contenido.tt_publicado, postId: logModal.contenido.tt_post_id },
+                { key: 'yt', label: 'YouTube',   pub: logModal.contenido.yt_publicado, postId: logModal.contenido.yt_post_id },
+                { key: 'li', label: 'LinkedIn',  pub: logModal.contenido.li_publicado, postId: logModal.contenido.li_post_id },
+                { key: 'fb', label: 'Facebook',  pub: logModal.contenido.fb_publicado, postId: logModal.contenido.fb_post_id },
+                { key: 'tw', label: 'Twitter/X', pub: logModal.contenido.tw_publicado, postId: logModal.contenido.tw_post_id },
+                { key: 'th', label: 'Threads',   pub: logModal.contenido.th_publicado, postId: logModal.contenido.th_post_id },
+              ].map(r => (
+                <div key={r.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text2)' }}>{r.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {r.postId && <a href={r.postId} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)' }}>ver post</a>}
+                    <span style={{ fontWeight: 700, color: r.pub ? '#22c55e' : '#ef4444' }}>{r.pub ? '✓ Publicado' : '✗ No publicado'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Respuesta de Upload Post API */}
+            {logModal.contenido.upload_post_request_id && (
+              <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>Respuesta Upload Post API</div>
+                {logModal.loading ? (
+                  <div style={{ color: 'var(--text2)', fontSize: 13 }}>Consultando API...</div>
+                ) : logModal.uploadStatus ? (
+                  <div>
+                    {logModal.uploadStatus.error ? (
+                      <div style={{ color: '#ef4444', fontSize: 13 }}>{logModal.uploadStatus.error}</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                          <span style={{ color: 'var(--text2)' }}>Estado global</span>
+                          <span style={{ color: logModal.uploadStatus.status === 'completed' ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{logModal.uploadStatus.status || '—'}</span>
+                        </div>
+                        {logModal.uploadStatus.results && Object.entries(logModal.uploadStatus.results).map(([plat, res]: [string, any]) => (
+                          <div key={plat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderTop: '1px solid var(--border)', fontSize: 12 }}>
+                            <span style={{ color: 'var(--text2)', textTransform: 'capitalize' }}>{plat}</span>
+                            <span style={{ color: res?.success ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                              {res?.success ? '✓ OK' : `✗ ${res?.error || 'Error'}`}
+                            </span>
+                          </div>
+                        ))}
+                        <details style={{ marginTop: 8 }}>
+                          <summary style={{ fontSize: 11, color: 'var(--text2)', cursor: 'pointer' }}>Ver respuesta completa</summary>
+                          <pre style={{ fontSize: 10, color: 'var(--text2)', background: 'var(--bg2)', padding: 8, borderRadius: 6, marginTop: 6, overflow: 'auto', maxHeight: 200 }}>{JSON.stringify(logModal.uploadStatus, null, 2)}</pre>
+                        </details>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {!logModal.contenido.upload_post_request_id && (
+              <div style={{ background: '#1a0000', border: '1px solid #ef4444', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 6 }}>⚠️ Problema detectado</div>
+                <div style={{ fontSize: 13, color: '#fca5a5', lineHeight: 1.6 }}>
+                  Este contenido tiene estado <strong>{logModal.contenido.estado}</strong> pero no tiene <code>upload_post_request_id</code>.<br/>
+                  Esto significa que el envío a Upload Post nunca se completó o falló silenciosamente.<br/>
+                  Usá el botón 📡 para republicar manualmente.
+                </div>
+              </div>
+            )}
+
+            <Btn onClick={() => setLogModal(null)} style={{ width: '100%', marginTop: 4 }}>Cerrar</Btn>
           </div>
         </div>
       )}
