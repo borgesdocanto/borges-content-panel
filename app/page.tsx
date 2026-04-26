@@ -1911,10 +1911,12 @@ export default function Panel() {
                 <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: pub ? `${RED_META[r]?.color}10` : 'var(--bg3)', border: `1px solid ${pub ? RED_META[r]?.color + '33' : 'var(--border)'}` }}>
                   <SvgIcon red={r} size={16} redOverride={pub ? RED_META[r]?.color : 'var(--text2)'} />
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: pub ? RED_META[r]?.color : 'var(--text)' }}>{RED_META[r]?.label}</span>
-                  {pub && <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, marginRight: 8 }}>✓ Publicado</span>}
-                  <input type="checkbox" checked={deleteRedes.includes(r)}
-                    onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))}
-                    style={{ width: 15, height: 15, cursor: 'pointer', accentColor: RED_META[r]?.color }} />
+                  {pub 
+                    ? <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700 }}>✓ Publicado</span>
+                    : <input type="checkbox" checked={deleteRedes.includes(r)}
+                        onChange={e => setDeleteRedes(prev => e.target.checked ? [...prev, r] : prev.filter(x => x !== r))}
+                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: RED_META[r]?.color }} />
+                  }
                 </div>
               ))}
             </div>
