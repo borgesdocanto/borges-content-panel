@@ -1930,12 +1930,47 @@ export default function Panel() {
                   const keyMap: Record<string, string> = { instagram: 'ig', tiktok: 'tt', youtube: 'yt', linkedin: 'li', facebook: 'fb', twitter: 'tw', threads: 'th' }
                   if (keyMap[r]) redesObj[keyMap[r]] = true
                 })
-                const res = await fetch('/api/publicar', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ contenido: cont, redes: redesObj, username: uploadPostUsername })
+                // Separar redes: foto/texto van directo, video va via n8n (evita timeout Vercel)
+                const redesVideo: Record<string, boolean> = {}
+                const redesFoto: Record<string, boolean> = {}
+                const VIDEO_REDES = ['ig', 'tt', 'yt', 'fb', 'th']
+                const FOTO_REDES = ['li', 'tw']
+                Object.entries(redesObj).forEach(([k, v]) => {
+                  if (VIDEO_REDES.includes(k)) redesVideo[k] = v as boolean
+                  else if (FOTO_REDES.includes(k)) redesFoto[k] = v as boolean
                 })
-                const result = await res.json()
+
+                // Publicar foto/texto directo (LinkedIn, Twitter) — sin video, sin timeout
+                let result: any = { skipped: true }
+                if (Object.keys(redesFoto).length > 0) {
+                  const resFoto = await fetch('/api/publicar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contenido: cont, redes: redesFoto, username: uploadPostUsername })
+                  })
+                  result = await resFoto.json()
+                }
+
+                // Publicar video via n8n (IG, TikTok, YouTube, Facebook, Threads)
+                if (Object.keys(redesVideo).length > 0) {
+                  const plataformasVideo = Object.entries(redesVideo)
+                    .filter(([,v]) => v)
+                    .map(([k]) => ({ ig: 'instagram', tt: 'tiktok', yt: 'youtube', fb: 'facebook', th: 'threads' }[k]))
+                    .filter(Boolean)
+                  const resVideo = await fetch('/api/republicar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contenido_id: cont.id, plataformas_video: plataformasVideo })
+                  })
+                  const dataVideo = await resVideo.json()
+                  if (dataVideo.ok) {
+                    showToast('📡 Video enviado a publicar via n8n — puede tardar unos minutos')
+                  } else {
+                    showToast('⚠️ Error video: ' + (dataVideo.error || 'Error desconocido'))
+                  }
+                  await fetchData()
+                }
+
                 const liError2 = result.linkedin_error || null
                 if (!result.request_id && liError2) {
                   showToast('⚠️ LinkedIn: ' + liError2)
