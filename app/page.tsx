@@ -910,18 +910,20 @@ export default function Panel() {
               setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo, ig_publicado: c.ig_publicado, tt_publicado: c.tt_publicado, yt_publicado: c.yt_publicado, li_publicado: c.li_publicado, fb_publicado: c.fb_publicado, tw_publicado: c.tw_publicado, th_publicado: c.th_publicado })
             }} style={{ padding: '6px 10px' }} title="Republicar">📡</Btn>
             <Btn variant="ghost" onClick={async () => {
-              const modal = { contenido: c, uploadStatus: null, loading: true }
-              setLogModal(modal)
-              if (c.upload_post_request_id) {
+              setLogModal({ contenido: c, uploadStatus: null, loading: true })
+              // Leer siempre fresco de Supabase
+              const { data: fresh } = await supabase.from('contenido').select('*').eq('id', c.id).single()
+              const fc = fresh || c
+              if (fc.upload_post_request_id) {
                 try {
-                  const res = await fetch(`/api/upload-status?request_id=${c.upload_post_request_id}`)
+                  const res = await fetch(`/api/upload-status?request_id=${fc.upload_post_request_id}`)
                   const data = await res.json()
-                  setLogModal({ contenido: c, uploadStatus: data, loading: false })
+                  setLogModal({ contenido: fc, uploadStatus: data, loading: false })
                 } catch (e) {
-                  setLogModal({ contenido: c, uploadStatus: { error: 'No se pudo consultar Upload Post API' }, loading: false })
+                  setLogModal({ contenido: fc, uploadStatus: { error: 'No se pudo consultar Upload Post API' }, loading: false })
                 }
               } else {
-                setLogModal({ contenido: c, uploadStatus: null, loading: false })
+                setLogModal({ contenido: fc, uploadStatus: null, loading: false })
               }
             }} style={{ padding: '6px 10px' }} title="Ver log de publicación">📋</Btn>
             <Btn variant="ghost" onClick={async () => {
@@ -1764,7 +1766,26 @@ export default function Panel() {
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 500, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>📋 Log de publicación</div>
-              <span onClick={() => setLogModal(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <span onClick={async () => {
+                  const id = logModal.contenido.id
+                  setLogModal(prev => prev ? { ...prev, loading: true } : null)
+                  const { data: fresh } = await supabase.from('contenido').select('*').eq('id', id).single()
+                  const fc = fresh || logModal.contenido
+                  if (fc.upload_post_request_id) {
+                    try {
+                      const res = await fetch(`/api/upload-status?request_id=${fc.upload_post_request_id}`)
+                      const data = await res.json()
+                      setLogModal({ contenido: fc, uploadStatus: data, loading: false })
+                    } catch (e) {
+                      setLogModal({ contenido: fc, uploadStatus: { error: 'Error al consultar' }, loading: false })
+                    }
+                  } else {
+                    setLogModal({ contenido: fc, uploadStatus: null, loading: false })
+                  }
+                }} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 16 }} title="Refrescar">🔄</span>
+                <span onClick={() => setLogModal(null)} style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 20 }}>✕</span>
+              </div>
             </div>
             <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>{logModal.contenido.ig_titulo || logModal.contenido.archivo}</div>
 
