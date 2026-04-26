@@ -1940,33 +1940,19 @@ export default function Panel() {
                   else if (FOTO_REDES.includes(k)) redesFoto[k] = v as boolean
                 })
 
-                // Publicar foto/texto directo (LinkedIn, Twitter) — sin video, sin timeout
-                let result: any = { skipped: true }
-                if (Object.keys(redesFoto).length > 0) {
-                  const resFoto = await fetch('/api/publicar', {
+                // Publicar todas las redes via Edge Function (sin timeout)
+                const todasRedes = { ...redesFoto, ...redesVideo }
+                if (Object.keys(todasRedes).length > 0) {
+                  const res = await fetch('/api/publicar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contenido: cont, redes: redesFoto, username: uploadPostUsername })
+                    body: JSON.stringify({ contenido: cont, redes: todasRedes, username: uploadPostUsername })
                   })
-                  result = await resFoto.json()
-                }
-
-                // Publicar video via n8n (IG, TikTok, YouTube, Facebook, Threads)
-                if (Object.keys(redesVideo).length > 0) {
-                  const plataformasVideo = Object.entries(redesVideo)
-                    .filter(([,v]) => v)
-                    .map(([k]) => ({ ig: 'instagram', tt: 'tiktok', yt: 'youtube', fb: 'facebook', th: 'threads' }[k]))
-                    .filter(Boolean)
-                  const resVideo = await fetch('/api/republicar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contenido_id: cont.id, plataformas_video: plataformasVideo })
-                  })
-                  const dataVideo = await resVideo.json()
-                  if (dataVideo.ok) {
-                    showToast('📡 Video enviado a publicar via n8n — puede tardar unos minutos')
+                  const data = await res.json()
+                  if (data.success) {
+                    showToast('✅ Publicado correctamente')
                   } else {
-                    showToast('⚠️ Error video: ' + (dataVideo.error || 'Error desconocido'))
+                    showToast('⚠️ Error: ' + (data.error || 'Error desconocido'))
                   }
                   await fetchData()
                 }
