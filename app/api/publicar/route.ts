@@ -142,7 +142,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (redes.yt) {
-      form.append('youtube_title', (contenido.yt_titulo || '').slice(0, 100))
+      const ytTitle = (contenido.yt_titulo || contenido.ig_titulo || contenido.archivo || 'Video inmobiliario').slice(0, 100)
+      form.append('youtube_title', ytTitle)
+      console.log('=== YT TITLE ===', ytTitle)
       const ytDesc = [contenido.yt_descripcion, contenido.yt_hashtags ? `\n\n${contenido.yt_hashtags}` : ''].filter(Boolean).join('').slice(0, 5000)
       form.append('youtube_description', ytDesc)
       const tagsList: string[] = (contenido.yt_keywords || '').split(',').map((t: string) => t.trim()).filter(Boolean)
@@ -192,6 +194,7 @@ export async function POST(req: NextRequest) {
       linkedin_request_id: linkedinRequestId,
       x_error: xError,
       x_request_id: xRequestId,
+      _debug: { username, videoPlatforms }
     })
 
   } catch (e: any) {

@@ -1963,7 +1963,7 @@ export default function Panel() {
                   showToast('✅ Publicado correctamente')
                   await fetchData()
                 } else {
-                  showToast('⚠️ Error: ' + (result.message || result.error || 'Error desconocido'))
+                  showToast('⚠️ ' + (result.message || result.error || JSON.stringify(result).slice(0, 120)))
                   await fetchData()
                 }
               }}
