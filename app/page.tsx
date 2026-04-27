@@ -736,7 +736,7 @@ export default function Panel() {
   }
 
   const USER_ID = currentUser?.id || ''
-  const USER_CONFIG_KEYS = ['drive_carpeta_publicar', 'drive_carpeta_publicados', 'max_videos_diarios', 'autopublicacion', 'hora_instagram', 'hora_tiktok', 'hora_threads', 'hora_youtube', 'hora_linkedin', 'hora_twitter', 'dias_reposteo', 'score_reposteo', 'intervalo_horas', 'min_views']
+  const USER_CONFIG_KEYS = ['drive_carpeta_publicar', 'drive_carpeta_publicados', 'max_videos_diarios', 'autopublicacion', 'hora_instagram', 'hora_tiktok', 'hora_threads', 'hora_youtube', 'hora_linkedin', 'hora_twitter', 'dias_reposteo', 'score_reposteo', 'intervalo_horas', 'min_views', 'dias_limpieza_drive', 'limpieza_drive_auto']
 
   const savePerfilUsuario = async () => {
     setSaving(true)
@@ -1615,6 +1615,59 @@ export default function Panel() {
                   <button onClick={saveConfig} disabled={saving} style={{ width: '100%', padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: saving ? 'var(--border)' : 'var(--gold)', color: saving ? 'var(--text2)' : '#000' }}>
                     {saving ? 'Guardando...' : 'Guardar configuración de Drive'}
                   </button>
+                </Card>
+
+                {/* LIMPIEZA DE DRIVE */}
+                <Card style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>🗑 Limpieza automática de Drive</div>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, marginBottom: 16 }}>
+                    Eliminá automáticamente los videos publicados de la carpeta "Publicados" en Google Drive para liberar espacio.
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Eliminar videos más viejos de (días)</div>
+                    <input type="number" min="7" max="365" value={config['dias_limpieza_drive'] || '90'}
+                      onChange={e => setConfig(prev => ({ ...prev, dias_limpieza_drive: e.target.value }))}
+                      style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: 6, fontSize: 14, width: '100%' }} />
+                    <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>Los videos más antiguos que este número de días serán marcados para eliminación</div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>Limpieza automática semanal</div>
+                      <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Se ejecuta todos los domingos a las 3am</div>
+                    </div>
+                    <div onClick={() => setConfig(prev => ({ ...prev, limpieza_drive_auto: prev.limpieza_drive_auto === 'true' ? 'false' : 'true' }))}
+                      style={{ width: 48, height: 26, borderRadius: 13, background: config['limpieza_drive_auto'] === 'true' ? 'var(--accent)' : 'var(--border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 3, left: config['limpieza_drive_auto'] === 'true' ? 25 : 3, width: 20, height: 20, borderRadius: 10, background: '#fff', transition: 'left 0.2s' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={saveConfig} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: saving ? 'var(--border)' : 'var(--gold)', color: saving ? 'var(--text2)' : '#000' }}>
+                      {saving ? 'Guardando...' : 'Guardar'}
+                    </button>
+                    <button onClick={async () => {
+                      const dias = config['dias_limpieza_drive'] || '90'
+                      const { data: { session } } = await supabase.auth.getSession()
+                      if (!confirm(`¿Eliminás de Drive todos los videos publicados hace más de ${dias} días?`)) return
+                      showToast('🗑 Procesando limpieza...')
+                      try {
+                        const res = await fetch('https://zphzoaeihoziyhhdatut.supabase.co/functions/v1/limpiar-drive', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'apikey': ['sb_secret_NGX9Agd0mK1', 'fOdb8__5c7Q_HqYpUPLU'].join(''), 'Authorization': `Bearer ${session?.access_token || ''}` },
+                          body: JSON.stringify({ user_id: USER_ID, dias })
+                        })
+                        const data = await res.json()
+                        if (data.ok) {
+                          showToast(`✅ ${data.eliminados} videos marcados para eliminar de Drive`)
+                        } else {
+                          showToast('⚠️ Error: ' + (data.error || 'Error desconocido'))
+                        }
+                      } catch(e: any) {
+                        showToast('⚠️ Error: ' + e.message)
+                      }
+                    }} style={{ flex: 1, padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }}>
+                      🗑 Ejecutar ahora
+                    </button>
+                  </div>
                 </Card>
 
                 {/* AUTOPUBLICACION */}
