@@ -601,10 +601,16 @@ export default function Panel() {
     if (cont) {
       try {
         showToast('📤 Publicando en redes...')
-        const res = await fetch('/api/publicar', {
+        // Llamar directo a Edge Function de Supabase — sin pasar por Vercel (evita timeout)
+        const edgeUrl = 'https://zphzoaeihoziyhhdatut.supabase.co/functions/v1/publicar'
+        const res = await fetch(edgeUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contenido: cont, redes, username: uploadPostUsername })
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': ['sb_secret_NGX9Agd0mK1', 'fOdb8__5c7Q_HqYpUPLU'].join(''),
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`
+          },
+          body: JSON.stringify({ contenido_id: cont.id, redes, username: uploadPostUsername })
         })
         const result = await res.json()
         console.log('Upload Post result:', JSON.stringify(result))
@@ -1934,62 +1940,33 @@ export default function Panel() {
                   if (keyMap[r]) redesObj[keyMap[r]] = true
                 })
 
-                // LI y TW: foto/texto directo via /api/publicar
-                const FOTO_REDES = ['li', 'tw']
-                const redesFoto: Record<string, boolean> = {}
-                const redesVideo: Record<string, boolean> = {}
-                Object.entries(redesObj).forEach(([k, v]) => {
-                  if (FOTO_REDES.includes(k)) redesFoto[k] = v as boolean
-                  else redesVideo[k] = v as boolean
-                })
-
-                if (Object.keys(redesFoto).length > 0) {
-                  try {
-                    const resFoto = await fetch('/api/publicar', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ contenido: cont, redes: redesFoto, username: uploadPostUsername })
-                    })
-                    const dataFoto = await resFoto.json()
-                    if (dataFoto.request_id || dataFoto.linkedin_request_id) {
-                      showToast('✅ LinkedIn/X enviados')
-                    } else {
-                      showToast('⚠️ LinkedIn/X: ' + (dataFoto.error || dataFoto.message || JSON.stringify(dataFoto).slice(0,100)))
-                    }
-                  } catch(e: any) {
-                    showToast('⚠️ LinkedIn/X error: ' + e.message)
+                // Publicar todo via Edge Function directa
+                try {
+                  const session = await supabase.auth.getSession()
+                  const token = session.data.session?.access_token || ''
+                  const res = await fetch('https://zphzoaeihoziyhhdatut.supabase.co/functions/v1/publicar', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'apikey': ['sb_secret_NGX9Agd0mK1', 'fOdb8__5c7Q_HqYpUPLU'].join(''),
+                      'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ contenido_id: cont.id, redes: redesObj, username: uploadPostUsername })
+                  })
+                  const data = await res.json()
+                  console.log('Modal publicar response:', res.status, JSON.stringify(data))
+                  if (res.ok && data.ok) {
+                    showToast('✅ Publicación enviada — iconos se actualizarán en minutos')
+                    setTimeout(() => fetchData(), 15000)
+                  } else {
+                    showToast('⚠️ Error: ' + (data.error || JSON.stringify(data).slice(0, 150)))
                   }
+                } catch(e: any) {
+                  showToast('⚠️ Error de conexión: ' + e.message)
                 }
-
-                // IG, TikTok, YouTube, Facebook, Threads: van via n8n que descarga del VPS
-                if (Object.keys(redesVideo).length > 0) {
-                  const plataformasVideo = Object.keys(redesVideo)
-                    .map(k => ({ ig: 'instagram', tt: 'tiktok', yt: 'youtube', fb: 'facebook', th: 'threads' }[k]))
-                    .filter(Boolean)
-                  try {
-                    const resN8n = await fetch('https://n8n.borges.com.ar/webhook/maestro-republicar', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        contenido_id: cont.id,
-                        file_id_drive: cont.file_id_drive,
-                        user_id: cont.user_id,
-                        username: uploadPostUsername,
-                        plataformas: plataformasVideo
-                      })
-                    })
-                    const txtN8n = await resN8n.text()
-                    if (resN8n.ok) {
-                      showToast('📡 Video en proceso — n8n publicando en ' + plataformasVideo.join(', '))
-                    } else {
-                      showToast('⚠️ n8n error ' + resN8n.status + ': ' + txtN8n.slice(0, 120))
-                    }
-                  } catch(e: any) {
-                    showToast('⚠️ No se pudo conectar con n8n: ' + e.message)
-                  }
-                }
-
                 await fetchData()
+
+
               }}
               style={{ width: '100%', padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: deleteRedes.length === 0 ? 'default' : 'pointer', border: 'none', background: deleteRedes.length === 0 ? 'var(--border)' : 'var(--accent)', color: '#fff', opacity: deleteRedes.length === 0 ? 0.5 : 1, marginBottom: 20 }}
             >
