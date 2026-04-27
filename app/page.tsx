@@ -328,7 +328,7 @@ export default function Panel() {
   const [selectedContent, setSelectedContent] = useState<Contenido | null>(null)
   const [deleteModal, setDeleteModal] = useState<{ id: string; nombre: string; ig_publicado?: boolean; tt_publicado?: boolean; yt_publicado?: boolean; li_publicado?: boolean; fb_publicado?: boolean; tw_publicado?: boolean; th_publicado?: boolean } | null>(null)
   const [deleteRedes, setDeleteRedes] = useState<string[]>([])
-  const [logModal, setLogModal] = useState<{ contenido: Contenido; uploadStatus: any | null; loading: boolean } | null>(null)
+  const [logModal, setLogModal] = useState<{ contenido: Contenido; uploadStatus: any | null; loading: boolean; logs?: any[] } | null>(null)
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
   const [pendientes, setPendientes] = useState<Contenido[]>([])
@@ -917,21 +917,21 @@ export default function Panel() {
               setDeleteModal({ id: c.id, nombre: c.ig_titulo || c.archivo, ig_publicado: c.ig_publicado, tt_publicado: c.tt_publicado, yt_publicado: c.yt_publicado, li_publicado: c.li_publicado, fb_publicado: c.fb_publicado, tw_publicado: c.tw_publicado, th_publicado: c.th_publicado })
             }} style={{ padding: '6px 10px' }} title="Republicar">📡</Btn>
             <Btn variant="ghost" onClick={async () => {
-              setLogModal({ contenido: c, uploadStatus: null, loading: true })
-              // Leer siempre fresco de Supabase
+              setLogModal({ contenido: c, uploadStatus: null, loading: true, logs: [] })
               const { data: fresh } = await supabase.from('contenido').select('*').eq('id', c.id).single()
               const fc = fresh || c
+              const { data: logs } = await supabase.from('publicacion_log')
+                .select('*').eq('contenido_id', c.id).order('created_at', { ascending: true })
+              let uploadStatus = null
               if (fc.upload_post_request_id) {
                 try {
                   const res = await fetch(`/api/upload-status?request_id=${fc.upload_post_request_id}`)
-                  const data = await res.json()
-                  setLogModal({ contenido: fc, uploadStatus: data, loading: false })
+                  uploadStatus = await res.json()
                 } catch (e) {
-                  setLogModal({ contenido: fc, uploadStatus: { error: 'No se pudo consultar Upload Post API' }, loading: false })
+                  uploadStatus = { error: 'No se pudo consultar Upload Post API' }
                 }
-              } else {
-                setLogModal({ contenido: fc, uploadStatus: null, loading: false })
               }
+              setLogModal({ contenido: fc, uploadStatus, loading: false, logs: logs || [] })
             }} style={{ padding: '6px 10px' }} title="Ver log de publicación">📋</Btn>
             <Btn variant="ghost" onClick={async () => {
               if (!confirm('¿Eliminás este contenido? Esta acción no se puede deshacer.')) return
@@ -1880,9 +1880,38 @@ export default function Panel() {
               <div style={{ background: '#1a0000', border: '1px solid #ef4444', borderRadius: 10, padding: 14, marginBottom: 14 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 6 }}>⚠️ Problema detectado</div>
                 <div style={{ fontSize: 13, color: '#fca5a5', lineHeight: 1.6 }}>
-                  Este contenido tiene estado <strong>{logModal.contenido.estado}</strong> pero no tiene <code>upload_post_request_id</code>.<br/>
-                  Esto significa que el envío a Upload Post nunca se completó o falló silenciosamente.<br/>
-                  Usá el botón 📡 para republicar manualmente.
+                  Este contenido nunca se envió a Upload Post correctamente. Usá el botón 📡 para publicar manualmente.
+                </div>
+              </div>
+            )}
+
+            {/* Historial de ejecuciones */}
+            {logModal.logs && logModal.logs.length > 0 && (
+              <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>
+                  Historial de envíos ({logModal.logs.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+                  {logModal.logs.map((log: any, i: number) => (
+                    <div key={i} style={{ background: 'var(--bg2)', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, textTransform: 'capitalize', color: 'var(--text)' }}>{log.red}</span>
+                        <span style={{ color: 'var(--text2)' }}>{new Date(log.created_at).toLocaleString('es-AR')}</span>
+                      </div>
+                      {log.request_id && (
+                        <div style={{ color: '#22c55e', fontFamily: 'monospace', fontSize: 10 }}>✓ request_id: {log.request_id.slice(0,16)}...</div>
+                      )}
+                      {log.error && (
+                        <div style={{ color: '#ef4444', fontSize: 11 }}>✗ {log.error}</div>
+                      )}
+                      {log.resultado && !log.request_id && (
+                        <details>
+                          <summary style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: 10 }}>Ver respuesta</summary>
+                          <pre style={{ fontSize: 9, color: 'var(--text2)', marginTop: 4, overflow: 'auto' }}>{JSON.stringify(log.resultado, null, 2).slice(0, 500)}</pre>
+                        </details>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
