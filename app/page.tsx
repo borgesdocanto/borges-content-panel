@@ -1927,90 +1927,69 @@ export default function Panel() {
                 const { data: cont } = await supabase.from('contenido').select('*').eq('id', deleteModal.id).single()
                 if (!cont) return
                 setDeleteModal(null)
-                showToast('📤 Publicando en redes seleccionadas...')
+                showToast('📤 Enviando a publicar...')
                 const redesObj: Record<string, boolean> = {}
                 deleteRedes.forEach(r => {
                   const keyMap: Record<string, string> = { instagram: 'ig', tiktok: 'tt', youtube: 'yt', linkedin: 'li', facebook: 'fb', twitter: 'tw', threads: 'th' }
                   if (keyMap[r]) redesObj[keyMap[r]] = true
                 })
-                // Separar redes: foto/texto van directo, video va via n8n (evita timeout Vercel)
-                const redesVideo: Record<string, boolean> = {}
-                const redesFoto: Record<string, boolean> = {}
-                const VIDEO_REDES = ['ig', 'tt', 'yt', 'fb', 'th']
+
+                // LI y TW: foto/texto directo via /api/publicar
                 const FOTO_REDES = ['li', 'tw']
+                const redesFoto: Record<string, boolean> = {}
+                const redesVideo: Record<string, boolean> = {}
                 Object.entries(redesObj).forEach(([k, v]) => {
-                  if (VIDEO_REDES.includes(k)) redesVideo[k] = v as boolean
-                  else if (FOTO_REDES.includes(k)) redesFoto[k] = v as boolean
+                  if (FOTO_REDES.includes(k)) redesFoto[k] = v as boolean
+                  else redesVideo[k] = v as boolean
                 })
 
-                // Publicar todas las redes via Edge Function (sin timeout)
-                const todasRedes = { ...redesFoto, ...redesVideo }
-                if (Object.keys(todasRedes).length > 0) {
-                  const res = await fetch('/api/publicar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contenido: cont, redes: todasRedes, username: uploadPostUsername })
-                  })
-                  const data = await res.json()
-                  if (data.success) {
-                    showToast('✅ Publicado correctamente')
-                  } else {
-                    showToast('⚠️ Error: ' + (data.error || 'Error desconocido'))
+                if (Object.keys(redesFoto).length > 0) {
+                  try {
+                    const resFoto = await fetch('/api/publicar', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ contenido: cont, redes: redesFoto, username: uploadPostUsername })
+                    })
+                    const dataFoto = await resFoto.json()
+                    if (dataFoto.request_id || dataFoto.linkedin_request_id) {
+                      showToast('✅ LinkedIn/X enviados')
+                    } else {
+                      showToast('⚠️ LinkedIn/X: ' + (dataFoto.error || dataFoto.message || JSON.stringify(dataFoto).slice(0,100)))
+                    }
+                  } catch(e: any) {
+                    showToast('⚠️ LinkedIn/X error: ' + e.message)
                   }
-                  await fetchData()
                 }
 
-                const liError2 = result.linkedin_error || null
-                if (!result.request_id && liError2) {
-                  showToast('⚠️ LinkedIn: ' + liError2)
-                } else if (result.request_id) {
-                  showToast('📡 Procesando... actualizando estado en segundos')
-                  let intentos2 = 0
-                  const poll2 = async () => {
-                    intentos2++
-                    try {
-                      const sr = await fetch(`/api/upload-status?request_id=${result.request_id}`)
-                      const sd = await sr.json()
-                      console.log('Poll2 status:', sd.status, JSON.stringify(sd.results))
-                      const stillProcessing2 = ['pending','queued','processing','in_progress'].includes(sd.status)
-                      if (sd.results) {
-                        const updates: Record<string, boolean> = {}
-                        const r2 = sd.results
-                        if (redesObj.ig && r2.instagram?.success) updates.ig_publicado = true
-                        if (redesObj.tt && r2.tiktok?.success) updates.tt_publicado = true
-                        if (redesObj.yt && r2.youtube?.success) updates.yt_publicado = true
-                        if (redesObj.li && r2.linkedin?.success) updates.li_publicado = true
-                        if (redesObj.fb && r2.facebook?.success) updates.fb_publicado = true
-                        if (redesObj.tw && r2.x?.success) updates.tw_publicado = true
-                        if (redesObj.th && r2.threads?.success) updates.th_publicado = true
-                        if (Object.keys(updates).length > 0) {
-                          await supabase.from('contenido').update(updates).eq('id', cont.id)
-                          await fetchData()
-                        }
-                        if (!stillProcessing2) {
-                          const errores2 = Object.entries(r2)
-                            .filter(([,v]: any) => !v.success)
-                            .map(([k,v]: any) => `${k}: ${(v as any).message||(v as any).error||'error'}`)
-                            .join(' | ')
-                          const exito2 = Object.keys(updates).length > 0
-                          showToast(exito2
-                            ? (errores2 ? `✅ Parcial ⚠️ ${errores2}` : '✅ Publicado — logos actualizados')
-                            : `⚠️ ${errores2 || 'Sin éxito — revisá Upload Post'}`)
-                          return
-                        }
-                      }
-                      if (stillProcessing2 || intentos2 < 15) setTimeout(poll2, 8000)
-                      else { await fetchData(); showToast('⏳ Publicado — actualizá la página para ver logos') }
-                    } catch(e) { if (intentos2 < 15) setTimeout(poll2, 8000) }
+                // IG, TikTok, YouTube, Facebook, Threads: van via n8n que descarga del VPS
+                if (Object.keys(redesVideo).length > 0) {
+                  const plataformasVideo = Object.keys(redesVideo)
+                    .map(k => ({ ig: 'instagram', tt: 'tiktok', yt: 'youtube', fb: 'facebook', th: 'threads' }[k]))
+                    .filter(Boolean)
+                  try {
+                    const resN8n = await fetch('https://n8n.borges.com.ar/webhook/maestro-republicar', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        contenido_id: cont.id,
+                        file_id_drive: cont.file_id_drive,
+                        user_id: cont.user_id,
+                        username: uploadPostUsername,
+                        plataformas: plataformasVideo
+                      })
+                    })
+                    const txtN8n = await resN8n.text()
+                    if (resN8n.ok) {
+                      showToast('📡 Video en proceso — n8n publicando en ' + plataformasVideo.join(', '))
+                    } else {
+                      showToast('⚠️ n8n error ' + resN8n.status + ': ' + txtN8n.slice(0, 120))
+                    }
+                  } catch(e: any) {
+                    showToast('⚠️ No se pudo conectar con n8n: ' + e.message)
                   }
-                  setTimeout(poll2, 8000)
-                } else if (result.success) {
-                  showToast('✅ Publicado correctamente')
-                  await fetchData()
-                } else {
-                  showToast('⚠️ ' + (result.message || result.error || JSON.stringify(result).slice(0, 120)))
-                  await fetchData()
                 }
+
+                await fetchData()
               }}
               style={{ width: '100%', padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: deleteRedes.length === 0 ? 'default' : 'pointer', border: 'none', background: deleteRedes.length === 0 ? 'var(--border)' : 'var(--accent)', color: '#fff', opacity: deleteRedes.length === 0 ? 0.5 : 1, marginBottom: 20 }}
             >
