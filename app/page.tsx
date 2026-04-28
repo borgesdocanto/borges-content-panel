@@ -1050,8 +1050,41 @@ export default function Panel() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <h2 style={{ fontWeight: 700, fontSize: 22, color: 'var(--text)' }}>Pendientes de aprobación</h2>
-                  <div style={{ fontSize: 13, color: 'var(--text2)', background: 'var(--bg3)', padding: '6px 14px', borderRadius: 20, border: '1px solid var(--border)' }}>
-                    {pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', background: 'var(--bg3)', padding: '6px 14px', borderRadius: 20, border: '1px solid var(--border)' }}>
+                      {pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando
+                    </div>
+                    <button onClick={async () => {
+                      const btn = document.getElementById('btn-on-demand')
+                      if (btn) { btn.textContent = '⏳ Procesando...'; (btn as HTMLButtonElement).disabled = true }
+                      try {
+                        // 1. Correr Detector Drive para detectar nuevos videos
+                        showToast('🔍 Buscando videos nuevos en Drive...')
+                        await fetch('https://n8n.borges.com.ar/webhook/postia-on-demand', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ user_id: USER_ID, manual: true })
+                        })
+                        // 2. Esperar 3 segundos y correr el Maestro
+                        await new Promise(r => setTimeout(r, 3000))
+                        showToast('⚙️ Generando contenido...')
+                        await fetch('https://n8n.borges.com.ar/webhook/maestro-ejecutar', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ user_id: USER_ID, manual: true })
+                        })
+                        showToast('✅ Proceso iniciado — el contenido aparecerá en minutos')
+                        // Polling para ver si apareció contenido nuevo
+                        setTimeout(() => fetchData(), 60000)
+                        setTimeout(() => fetchData(), 120000)
+                      } catch(e: any) {
+                        showToast('⚠️ Error: ' + e.message)
+                      } finally {
+                        if (btn) { btn.textContent = '⚡ Generar ahora'; (btn as HTMLButtonElement).disabled = false }
+                      }
+                    }} id="btn-on-demand" style={{ padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      ⚡ Generar ahora
+                    </button>
                   </div>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>Revisá el copy generado, editalo si es necesario, y aprobá para mover el video a Publicados.</div>
