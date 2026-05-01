@@ -600,8 +600,19 @@ export default function Panel() {
     // 3. Publicar en Upload Post
     if (cont) {
       try {
+        // Verificar si ya fue publicado para evitar doble publicacion
+        if (cont.upload_post_request_id) {
+          const redesYaPublicadas = Object.entries(redes)
+            .filter(([k, v]) => v && (cont as any)[`${k}_publicado`])
+            .map(([k]) => k)
+          if (redesYaPublicadas.length > 0) {
+            if (!confirm(`⚠️ Este contenido ya fue publicado en: ${redesYaPublicadas.join(', ')}.\n¿Querés publicarlo de nuevo?`)) {
+              setAprobando('')
+              return
+            }
+          }
+        }
         showToast('📤 Publicando en redes...')
-        // Llamar directo a Edge Function de Supabase — sin pasar por Vercel (evita timeout)
         const edgeUrl = 'https://zphzoaeihoziyhhdatut.supabase.co/functions/v1/publicar'
         const res = await fetch(edgeUrl, {
           method: 'POST',
