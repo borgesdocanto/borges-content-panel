@@ -393,9 +393,9 @@ export default function Panel() {
     const uid = USER_ID || ''
     setGenerandoAhora(horaId)
     try {
-      const res = await fetch('https://n8n.borges.com.ar/webhook/maestro-ejecutar', {
+      const res = await fetch('/api/n8n-proxy', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: uid, manual: true })
+        body: JSON.stringify({ webhook: 'maestro-ejecutar', user_id: uid, manual: true })
       })
       showToast(res.ok ? '✅ Generación iniciada — aparece en ~2 minutos' : '❌ Error al iniciar')
     } catch { showToast('❌ Error de conexión') }
@@ -1071,18 +1071,18 @@ export default function Panel() {
                       try {
                         // 1. Correr Detector Drive para detectar nuevos videos
                         showToast('🔍 Buscando videos nuevos en Drive...')
-                        await fetch('https://n8n.borges.com.ar/webhook/postia-on-demand', {
+                        await fetch('/api/n8n-proxy', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ user_id: USER_ID, manual: true })
+                          body: JSON.stringify({ webhook: 'postia-on-demand', user_id: USER_ID, manual: true })
                         })
                         // 2. Esperar 3 segundos y correr el Maestro
                         await new Promise(r => setTimeout(r, 3000))
                         showToast('⚙️ Generando contenido...')
-                        await fetch('https://n8n.borges.com.ar/webhook/maestro-ejecutar', {
+                        await fetch('/api/n8n-proxy', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ user_id: USER_ID, manual: true })
+                          body: JSON.stringify({ webhook: 'maestro-ejecutar', user_id: USER_ID, manual: true })
                         })
                         showToast('✅ Proceso iniciado — el contenido aparecerá en minutos')
                         // Polling para ver si apareció contenido nuevo
