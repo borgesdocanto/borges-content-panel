@@ -334,7 +334,6 @@ export default function Panel() {
   const [pendientes, setPendientes] = useState<Contenido[]>([])
   const [enCola, setEnCola] = useState(0)
   const [generandoPaso, setGenerandoPaso] = useState('')
-  const [generandoPaso, setGenerandoPaso] = useState<string>('')
   const [editandoCopy, setEditandoCopy] = useState<Record<string, Record<string, string>>>({})
   const [aprobando, setAprobando] = useState<string>('')
   const [redesActivas, setRedesActivas] = useState<Record<string, Record<string, boolean>>>({})
