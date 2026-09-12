@@ -332,6 +332,7 @@ export default function Panel() {
   const [filtroRed, setFiltroRed] = useState('todas')
   const [saving, setSaving] = useState(false)
   const [pendientes, setPendientes] = useState<Contenido[]>([])
+  const [enCola, setEnCola] = useState(0)
   const [editandoCopy, setEditandoCopy] = useState<Record<string, Record<string, string>>>({})
   const [aprobando, setAprobando] = useState<string>('')
   const [redesActivas, setRedesActivas] = useState<Record<string, Record<string, boolean>>>({})
@@ -549,6 +550,9 @@ export default function Panel() {
     if (cont) {
       setContenidos(cont)
       setPendientes(cont.filter((c: Contenido) => c.estado === 'pendiente_aprobacion'))
+      // Cargar cantidad en cola (pendientes de procesar)
+      const { count } = await supabase.from('cola').select('id', { count: 'exact', head: true }).eq('user_id', USER_ID_FETCH).eq('estado', 'pendiente')
+      setEnCola(count || 0)
     }
     const cfgMap: Record<string, string> = {}
     if (cfg) {
@@ -1062,8 +1066,9 @@ export default function Panel() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <h2 style={{ fontWeight: 700, fontSize: 22, color: 'var(--text)' }}>Pendientes de aprobación</h2>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div style={{ fontSize: 13, color: 'var(--text2)', background: 'var(--bg3)', padding: '6px 14px', borderRadius: 20, border: '1px solid var(--border)' }}>
-                      {pendientes.length} video{pendientes.length !== 1 ? 's' : ''} esperando
+                    <div style={{ fontSize: 13, color: 'var(--text2)', background: 'var(--bg3)', padding: '6px 14px', borderRadius: 20, border: '1px solid var(--border)', display: 'flex', gap: 12 }}>
+                      <span>{pendientes.length} para aprobar</span>
+                      {enCola > 0 && <span style={{ color: 'var(--accent)' }}>· {enCola} en cola</span>}
                     </div>
                     <button onClick={async () => {
                       const btn = document.getElementById('btn-on-demand')
@@ -1100,7 +1105,7 @@ export default function Panel() {
                   </div>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>Revisá el copy generado, editalo si es necesario, y aprobá para mover el video a Publicados.</div>
-                {pendientes.length === 0 && (
+                {pendientes.length === 0 && enCola === 0 && (
                   <Card>
                     <div style={{ textAlign: 'center', padding: 48, color: 'var(--text2)' }}>
                       <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
