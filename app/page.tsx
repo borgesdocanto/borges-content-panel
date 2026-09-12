@@ -1071,10 +1071,11 @@ export default function Panel() {
                       try {
                         // 1. Correr Detector Drive para detectar nuevos videos
                         showToast('🔍 Buscando videos nuevos en Drive...')
+                        // Ejecutar Detector Drive via API de n8n
                         await fetch('/api/n8n-proxy', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ webhook: 'postia-on-demand', user_id: USER_ID, manual: true })
+                          body: JSON.stringify({ workflow_id: '7hekXpuKu0lWhPUy', execute: true })
                         })
                         // 2. Esperar 3 segundos y correr el Maestro
                         await new Promise(r => setTimeout(r, 3000))

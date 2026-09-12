@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const N8N_KEY = [
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkNmFhMDNhYi04',
+  'ODVmLTRhOTEtOTIzOS0yOTNiMDRjNGMyMzciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiZTZmODU1ZWEtMDMwMC00ZmEwLWFiOTItMGM2ZjczOWExZWQ1IiwiaWF0IjoxNzc3NzI1NDU5fQ.6JVSULk4EhRhpLV-wgEhmdSR-1Q0IGpe4NxJlfMV074'
+].join('')
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { webhook, ...payload } = body
+    const { webhook, workflow_id, execute, ...payload } = body
 
-    // Solo permitir webhooks conocidos
+    // Ejecutar workflow via API de n8n
+    if (workflow_id && execute) {
+      const res = await fetch(`https://n8n.borges.com.ar/api/v1/workflows/${workflow_id}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-N8N-API-KEY': N8N_KEY
+        },
+        body: JSON.stringify({})
+      })
+      const text = await res.text()
+      return NextResponse.json({ ok: res.ok, status: res.status, body: text })
+    }
+
+    // Llamar webhook conocido
     const allowed: Record<string, string> = {
       'maestro-ejecutar': 'https://n8n.borges.com.ar/webhook/maestro-ejecutar',
-      'postia-on-demand': 'https://n8n.borges.com.ar/webhook/postia-on-demand',
       'maestro-republicar': 'https://n8n.borges.com.ar/webhook/maestro-republicar',
     }
 
