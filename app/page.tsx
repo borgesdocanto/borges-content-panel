@@ -1113,7 +1113,14 @@ export default function Panel() {
 
                         setGenerandoPaso('')
                         await fetchData()
-                        showToast('✅ Listo — revisá los pendientes')
+                        // Verificar si realmente hay nuevo pendiente
+                        const { count: countFinal } = await supabase.from('contenido').select('id', { count: 'exact', head: true }).eq('user_id', USER_ID).eq('estado', 'pendiente_aprobacion')
+                        if ((countFinal || 0) > pendientesAntes) {
+                          showToast('✅ Nuevo contenido generado — revisá Pendientes')
+                          setPage('pendientes')
+                        } else {
+                          showToast('⚠️ El proceso terminó pero no se encontró contenido nuevo. Revisá n8n.')
+                        }
                       } catch(e: any) {
                         setGenerandoPaso('')
                         showToast('⚠️ Error: ' + e.message)
