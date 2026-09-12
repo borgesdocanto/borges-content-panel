@@ -333,6 +333,8 @@ export default function Panel() {
   const [saving, setSaving] = useState(false)
   const [pendientes, setPendientes] = useState<Contenido[]>([])
   const [enCola, setEnCola] = useState(0)
+  const [generandoPaso, setGenerandoPaso] = useState('')
+  const [generandoPaso, setGenerandoPaso] = useState<string>('')
   const [editandoCopy, setEditandoCopy] = useState<Record<string, Record<string, string>>>({})
   const [aprobando, setAprobando] = useState<string>('')
   const [redesActivas, setRedesActivas] = useState<Record<string, Record<string, boolean>>>({})
@@ -1071,36 +1073,54 @@ export default function Panel() {
                       {enCola > 0 && <span style={{ color: 'var(--accent)' }}>· {enCola} en cola</span>}
                     </div>
                     <button onClick={async () => {
-                      const btn = document.getElementById('btn-on-demand')
-                      if (btn) { btn.textContent = '⏳ Procesando...'; (btn as HTMLButtonElement).disabled = true }
+                      setGenerandoPaso('🔍 Buscando videos en Drive...')
                       try {
-                        // 1. Correr Detector Drive para detectar nuevos videos
-                        showToast('🔍 Buscando videos nuevos en Drive...')
-                        // Ejecutar Detector Drive via API de n8n
+                        const colaAntes = enCola
+
+                        // Paso 1: Detector Drive
                         await fetch('/api/n8n-proxy', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ workflow_id: '7hekXpuKu0lWhPUy', execute: true })
-                        })
-                        // 2. Esperar 3 segundos y correr el Maestro
-                        await new Promise(r => setTimeout(r, 3000))
-                        showToast('⚙️ Generando contenido...')
+                        }).catch(() => {})
+
+                        // Polling cola
+                        setGenerandoPaso('⏳ Detectando videos nuevos...')
+                        for (let i = 0; i < 6; i++) {
+                          await new Promise(r => setTimeout(r, 5000))
+                          const { count } = await supabase.from('cola').select('id', { count: 'exact', head: true }).eq('user_id', USER_ID).eq('estado', 'pendiente')
+                          setEnCola(count || 0)
+                          if ((count || 0) > colaAntes) { setGenerandoPaso('✅ Video detectado en cola!'); break }
+                          if (i === 5) setGenerandoPaso('⚙️ Corriendo Maestro...')
+                        }
+
+                        // Paso 2: Maestro
+                        setGenerandoPaso('⚙️ Transcribiendo y generando copy...')
                         await fetch('/api/n8n-proxy', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ webhook: 'maestro-ejecutar', user_id: USER_ID, manual: true })
-                        })
-                        showToast('✅ Proceso iniciado — el contenido aparecerá en minutos')
-                        // Polling para ver si apareció contenido nuevo
-                        setTimeout(() => fetchData(), 60000)
-                        setTimeout(() => fetchData(), 120000)
+                        }).catch(() => {})
+
+                        // Polling pendientes — el proceso tarda ~2 min
+                        const pendientesAntes = pendientes.length
+                        for (let i = 0; i < 18; i++) {
+                          await new Promise(r => setTimeout(r, 10000))
+                          setGenerandoPaso(`🎨 Generando portadas${'.'.repeat((i % 3) + 1)} (${Math.round((i+1)*10/60)} min)`)
+                          await fetchData()
+                          const { count } = await supabase.from('contenido').select('id', { count: 'exact', head: true }).eq('user_id', USER_ID).eq('estado', 'pendiente_aprobacion')
+                          if ((count || 0) > pendientesAntes) { break }
+                        }
+
+                        setGenerandoPaso('')
+                        await fetchData()
+                        showToast('✅ Listo — revisá los pendientes')
                       } catch(e: any) {
+                        setGenerandoPaso('')
                         showToast('⚠️ Error: ' + e.message)
-                      } finally {
-                        if (btn) { btn.textContent = '⚡ Generar ahora'; (btn as HTMLButtonElement).disabled = false }
                       }
-                    }} id="btn-on-demand" style={{ padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      ⚡ Generar ahora
+                    }} id="btn-on-demand" disabled={!!generandoPaso} style={{ padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: generandoPaso ? 'default' : 'pointer', border: 'none', background: generandoPaso ? 'var(--bg3)' : 'var(--accent)', color: generandoPaso ? 'var(--text2)' : '#fff', display: 'flex', alignItems: 'center', gap: 6, minWidth: 160 }}>
+                      {generandoPaso || '⚡ Generar ahora'}
                     </button>
                   </div>
                 </div>
