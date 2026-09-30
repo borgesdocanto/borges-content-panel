@@ -1076,21 +1076,34 @@ export default function Panel() {
                       try {
                         const colaAntes = enCola
 
-                        // Paso 1: Detector Drive
-                        await fetch('/api/n8n-proxy', {
+                        // Paso 1: Detector Drive (webhook — la API pública de n8n no permite ejecutar workflows)
+                        const detRes = await fetch('/api/n8n-proxy', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ workflow_id: '7hekXpuKu0lWhPUy', execute: true })
-                        }).catch(() => {})
+                          body: JSON.stringify({ webhook: 'detector-ejecutar', user_id: USER_ID, manual: true })
+                        })
+                        const det = await detRes.json().catch(() => ({}))
+                        if (!det.ok) {
+                          throw new Error(det.status === 404
+                            ? 'El Detector Drive no tiene el webhook "detector-ejecutar" activo en n8n'
+                            : `Detector Drive respondió ${det.status || detRes.status}`)
+                        }
 
                         // Polling cola
                         setGenerandoPaso('⏳ Detectando videos nuevos...')
+                        let colaAhora = colaAntes
                         for (let i = 0; i < 6; i++) {
                           await new Promise(r => setTimeout(r, 5000))
                           const { count } = await supabase.from('cola').select('id', { count: 'exact', head: true }).eq('user_id', USER_ID).eq('estado', 'pendiente')
-                          setEnCola(count || 0)
-                          if ((count || 0) > colaAntes) { setGenerandoPaso('✅ Video detectado en cola!'); break }
-                          if (i === 5) setGenerandoPaso('⚙️ Corriendo Maestro...')
+                          colaAhora = count || 0
+                          setEnCola(colaAhora)
+                          if (colaAhora > colaAntes) { setGenerandoPaso('✅ Video detectado en cola!'); break }
+                        }
+
+                        if (colaAhora === 0) {
+                          setGenerandoPaso('')
+                          showToast('📭 No hay videos nuevos en la carpeta A PUBLICAR de Drive')
+                          return
                         }
 
                         // Paso 2: Maestro
@@ -1099,7 +1112,9 @@ export default function Panel() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ webhook: 'maestro-ejecutar', user_id: USER_ID, manual: true })
-                        }).catch(() => {})
+                        }).then(r => r.json()).then(m => {
+                          if (!m.ok) throw new Error(`Maestro respondió ${m.status}`)
+                        })
 
                         // Polling pendientes — el proceso tarda ~2 min
                         const pendientesAntes = pendientes.length

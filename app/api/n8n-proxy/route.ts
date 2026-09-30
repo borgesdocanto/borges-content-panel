@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Llamar webhook conocido
     const allowed: Record<string, string> = {
+      'detector-ejecutar': 'https://n8n.borges.com.ar/webhook/detector-ejecutar',
       'maestro-ejecutar': 'https://n8n.borges.com.ar/webhook/maestro-ejecutar',
       'maestro-republicar': 'https://n8n.borges.com.ar/webhook/maestro-republicar',
     }
